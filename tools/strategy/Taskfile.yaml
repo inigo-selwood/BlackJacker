@@ -1,0 +1,19 @@
+version: '3'
+
+vars:
+  PYTHON: tools/strategy/.venv/bin/python
+  SOURCE_DIR: tools/strategy/source
+  TEST_DIR: tools/strategy/unit_test
+
+tasks:
+  run:
+    desc: Run the strategy generator
+    dir: ../..
+    cmds:
+      - "PYTHONPATH={{.SOURCE_DIR}} {{.PYTHON}} {{.SOURCE_DIR}}/main.py {{.CLI_ARGS}}"
+
+  test:
+    desc: Run strategy checks
+    dir: ../..
+    cmds:
+      - "PYTHONPATH={{.SOURCE_DIR}} {{.PYTHON}} -m py_compile {{.SOURCE_DIR}}/main.py {{.SOURCE_DIR}}/arguments.py {{.SOURCE_DIR}}/schema.py {{.SOURCE_DIR}}/settings.py {{.SOURCE_DIR}}/simulation/strategy.py"

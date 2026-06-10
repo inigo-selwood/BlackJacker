@@ -5,3 +5,6 @@ includes:
     taskfile: ./blackjacker/Taskfile.yaml
     dir: ./blackjacker
     flatten: true
+  strategy:
+    taskfile: ./tools/strategy/Taskfile.yaml
+    dir: ./tools/strategy
