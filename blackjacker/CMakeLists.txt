@@ -16,6 +16,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 find_package(Curses REQUIRED)
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
 
+set(CLANG_FORMAT_STYLE
+    "file:${CMAKE_SOURCE_DIR}/configuration/.clang-format"
+)
+
 find_path(YAML_INCLUDE_DIR
     NAMES yaml.h
     PATHS
@@ -70,7 +74,7 @@ endif()
 
 if(CLANG_FORMAT_EXE)
     add_custom_target(format
-        COMMAND "${CLANG_FORMAT_EXE}" -i ${PROJECT_FORMAT_FILES}
+        COMMAND "${CLANG_FORMAT_EXE}" "--style=${CLANG_FORMAT_STYLE}" -i ${PROJECT_FORMAT_FILES}
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         COMMENT "Formatting source files"
         VERBATIM

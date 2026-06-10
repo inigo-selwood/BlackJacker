@@ -1,45 +1,7 @@
 version: '3'
 
-vars:
-  BUILD_DIR: build
-  APP: blackjacker
-  GENERATOR: Ninja
-  DOCS_INDEX: build/docs/html/index.html
-
-tasks:
-  configure:
-    desc: Configure BlackJacker with Ninja
-    cmds:
-      - cmake --fresh -S . -B {{.BUILD_DIR}} -G {{.GENERATOR}}
-
-  build:
-    desc: Format and build BlackJacker
-    deps:
-      - format
-    cmds:
-      - cmake --build {{.BUILD_DIR}} --parallel
-
-  run:
-    desc: Build and run BlackJacker
-    deps:
-      - build
-    cmds:
-      - ./{{.BUILD_DIR}}/{{.APP}}
-
-  docs:
-    desc: Generate Doxygen documentation
-    cmds:
-      - doxygen Doxyfile
-      - open {{.DOCS_INDEX}}
-
-  format:
-    desc: Format source files
-    deps:
-      - configure
-    cmds:
-      - cmake --build {{.BUILD_DIR}} --target format --parallel
-
-  clean:
-    desc: Remove generated build artifacts
-    cmds:
-      - rm -rf {{.BUILD_DIR}}
+includes:
+  blackjacker:
+    taskfile: ./blackjacker/Taskfile.yaml
+    dir: ./blackjacker
+    flatten: true
