@@ -29,11 +29,11 @@ ActionType = Enum(
 )
 
 
-class Base(DeclarativeBase):
+class _Base(DeclarativeBase):
     """Base class for strategy database ORM models."""
 
 
-class ExpectedValue(Base):
+class ExpectedValue(_Base):
     """Expected value for one action in one strategy decision context."""
 
     __tablename__ = "expected_values"
@@ -52,7 +52,7 @@ class ExpectedValue(Base):
 def create_database(output_path: Path) -> None:
     """Create an empty strategy database schema."""
     engine = create_engine(f"sqlite:///{output_path}")
-    Base.metadata.create_all(engine)
+    _Base.metadata.create_all(engine)
 
 
 def insert_expected_values(

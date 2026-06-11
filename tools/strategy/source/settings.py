@@ -50,36 +50,36 @@ class PlaySettings:
     blackjack_payout: BlackjackPayout
 
 
-def required(data: dict[str, Any], key: str) -> Any:
+def _required(data: dict[str, Any], key: str) -> Any:
     """Return a required YAML value."""
     if key not in data:
         raise ValueError(f"Missing required setting: {key}")
     return data[key]
 
 
-def parse_bool(data: dict[str, Any], key: str) -> bool:
+def _parse_bool(data: dict[str, Any], key: str) -> bool:
     """Parse a required boolean setting."""
-    value = required(data, key)
+    value = _required(data, key)
     if not isinstance(value, bool):
         raise ValueError(f"Expected boolean for setting: {key}")
     return value
 
 
-def parse_int(data: dict[str, Any], key: str) -> int:
+def _parse_int(data: dict[str, Any], key: str) -> int:
     """Parse a required integer setting."""
-    value = required(data, key)
+    value = _required(data, key)
     if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(f"Expected integer for setting: {key}")
     return value
 
 
-def parse_enum(
+def _parse_enum(
     data: dict[str, Any],
     key: str,
     enum_type: type[StrEnum],
 ) -> Any:
     """Parse a required string enum setting."""
-    value = required(data, key)
+    value = _required(data, key)
     if not isinstance(value, str):
         raise ValueError(f"Expected string for setting: {key}")
 
@@ -98,27 +98,27 @@ def load(path: Path) -> PlaySettings:
         raise ValueError("Settings YAML must contain a mapping.")
 
     return PlaySettings(
-        deck_count=parse_int(data, "deck-count"),
-        cut_percent=parse_int(data, "cut-percent"),
-        allow_double_down=parse_bool(data, "allow-double-down"),
-        allow_double_after_split=parse_bool(
+        deck_count=_parse_int(data, "deck-count"),
+        cut_percent=_parse_int(data, "cut-percent"),
+        allow_double_down=_parse_bool(data, "allow-double-down"),
+        allow_double_after_split=_parse_bool(
             data,
             "allow-double-after-split",
         ),
-        double_rule=parse_enum(data, "double-rule", DoubleRule),
-        allow_split=parse_bool(data, "allow-split"),
-        allow_resplit=parse_bool(data, "allow-resplit"),
-        allow_hit_split_aces=parse_bool(data, "allow-hit-split-aces"),
-        allow_resplit_aces=parse_bool(data, "allow-resplit-aces"),
-        allow_surrender=parse_bool(data, "allow-surrender"),
-        use_no_hole_card_rule=parse_bool(data, "use-no-hole-card-rule"),
-        show_true_count=parse_bool(data, "show-true-count"),
-        dealer_soft_17_rule=parse_enum(
+        double_rule=_parse_enum(data, "double-rule", DoubleRule),
+        allow_split=_parse_bool(data, "allow-split"),
+        allow_resplit=_parse_bool(data, "allow-resplit"),
+        allow_hit_split_aces=_parse_bool(data, "allow-hit-split-aces"),
+        allow_resplit_aces=_parse_bool(data, "allow-resplit-aces"),
+        allow_surrender=_parse_bool(data, "allow-surrender"),
+        use_no_hole_card_rule=_parse_bool(data, "use-no-hole-card-rule"),
+        show_true_count=_parse_bool(data, "show-true-count"),
+        dealer_soft_17_rule=_parse_enum(
             data,
             "dealer-soft-17-rule",
             DealerSoft17Rule,
         ),
-        blackjack_payout=parse_enum(
+        blackjack_payout=_parse_enum(
             data,
             "blackjack-payout",
             BlackjackPayout,

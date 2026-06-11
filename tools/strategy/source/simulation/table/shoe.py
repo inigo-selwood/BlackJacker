@@ -20,7 +20,7 @@ class Shoe:
     seed: int = INITIAL_SEED
 
 
-def clamp(value: int, minimum: int, maximum: int) -> int:
+def _clamp(value: int, minimum: int, maximum: int) -> int:
     """Clamp an integer to a range."""
     if value < minimum:
         return minimum
@@ -31,14 +31,14 @@ def clamp(value: int, minimum: int, maximum: int) -> int:
     return value
 
 
-def add_deck(shoe: Shoe) -> None:
+def _add_deck(shoe: Shoe) -> None:
     """Add one ordered deck to a shoe."""
     for suit in Suit:
         for rank in Rank:
             shoe.cards.append(Card(rank=rank, suit=suit))
 
 
-def shuffle_cards(shoe: Shoe) -> None:
+def _shuffle_cards(shoe: Shoe) -> None:
     """Shuffle cards using the same deterministic generator as the C app."""
     for index in range(len(shoe.cards) - 1, 0, -1):
         # Match the C app's simple linear congruential generator.
@@ -52,8 +52,8 @@ def shuffle_cards(shoe: Shoe) -> None:
 
 def shuffle(shoe: Shoe, deck_count: int, cut_percent: int) -> None:
     """Rebuild and shuffle a shoe while preserving its random sequence."""
-    deck_count = clamp(deck_count, 1, 8)
-    cut_percent = clamp(cut_percent, 1, 100)
+    deck_count = _clamp(deck_count, 1, 8)
+    cut_percent = _clamp(cut_percent, 1, 100)
 
     shoe.cards.clear()
     shoe.next_index = 0
@@ -61,14 +61,14 @@ def shuffle(shoe: Shoe, deck_count: int, cut_percent: int) -> None:
     shoe.cut_percent = cut_percent
 
     for _ in range(deck_count):
-        add_deck(shoe)
+        _add_deck(shoe)
 
     shoe.cut_index = len(shoe.cards) * cut_percent // 100
 
     if shoe.cut_index <= 0:
         shoe.cut_index = 1
 
-    shuffle_cards(shoe)
+    _shuffle_cards(shoe)
 
 
 def create(deck_count: int, cut_percent: int) -> Shoe:
@@ -80,8 +80,8 @@ def create(deck_count: int, cut_percent: int) -> Shoe:
 
 def draw(shoe: Shoe, deck_count: int, cut_percent: int) -> Card:
     """Draw a card, reshuffling first if the cut card has been reached."""
-    deck_count = clamp(deck_count, 1, 8)
-    cut_percent = clamp(cut_percent, 1, 100)
+    deck_count = _clamp(deck_count, 1, 8)
+    cut_percent = _clamp(cut_percent, 1, 100)
 
     if (
         not shoe.cards
