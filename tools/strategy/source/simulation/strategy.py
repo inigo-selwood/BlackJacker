@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import orm
 from schema import ExpectedValue
-from settings import PlaySettings
+from settings import DoubleRule, PlaySettings
 from simulation import ev
 from simulation.table.card import Rank
 
@@ -62,6 +62,40 @@ def _context_state(context: StrategyContext) -> tuple[int, int]:
     return context.player_total, 0
 
 
+def _double_available(settings: PlaySettings, player_total: int) -> bool:
+    """Return whether double is legal for a total."""
+    if not settings.allow_double_down:
+        return False
+
+    if settings.double_rule == DoubleRule.NINE_TEN_ELEVEN:
+        return 9 <= player_total <= 11
+
+    if settings.double_rule == DoubleRule.TEN_ELEVEN:
+        return player_total in (10, 11)
+
+    return True
+
+
+def _action_available(
+    settings: PlaySettings,
+    context: StrategyContext,
+    action: Action,
+) -> bool:
+    """Return whether an action is legal in a strategy context."""
+    player_total, _ = _context_state(context)
+
+    if action in (Action.STAND, Action.HIT):
+        return True
+
+    if action == Action.DOUBLE:
+        return _double_available(settings, player_total)
+
+    if action == Action.SURRENDER:
+        return settings.allow_surrender
+
+    return context.hand_kind == HandKind.PAIR and settings.allow_split
+
+
 def _action_ev(
     settings: PlaySettings,
     context: StrategyContext,
@@ -83,9 +117,6 @@ def _action_ev(
 
     if action == Action.SURRENDER:
         return ev.SURRENDER_EV
-
-    if context.hand_kind != HandKind.PAIR or not settings.allow_split:
-        return 0.0
 
     return ev.split(context.player_total, context.dealer_rank, settings)
 
@@ -115,13 +146,19 @@ def expected_values(settings: PlaySettings) -> list[ExpectedValue]:
 
     for context in _contexts():
         for action in Action:
+            available = _action_available(settings, context, action)
             rows.append(
                 ExpectedValue(
                     hand_kind=orm.to_orm(context.hand_kind),
                     player_total=context.player_total,
                     dealer_upcard=orm.to_orm(context.dealer_rank),
                     action=orm.to_orm(action),
-                    ev=_action_ev(settings, context, action),
+                    available=available,
+                    ev=(
+                        _action_ev(settings, context, action)
+                        if available
+                        else 0.0
+                    ),
                 )
             )
 

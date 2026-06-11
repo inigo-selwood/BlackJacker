@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from sqlalchemy import Enum, Float, Integer, create_engine
+from sqlalchemy import Boolean, Enum, Float, Integer, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 HandKindType = Enum("hard", "soft", "pair", name="hand_kind")
@@ -46,6 +46,7 @@ class ExpectedValue(_Base):
         nullable=False,
     )
     action: Mapped[str] = mapped_column(ActionType, nullable=False)
+    available: Mapped[bool] = mapped_column(Boolean, nullable=False)
     ev: Mapped[float] = mapped_column(Float, nullable=False)
 
 
