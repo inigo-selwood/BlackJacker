@@ -1,5 +1,6 @@
 #include "graphics/graphics.h"
 
+#include <ctype.h>
 #include <curses.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,6 +78,22 @@ static Graphics_Alignment controlLabelAlignment(Graphics_Control control) {
     return GRAPHICS_ALIGN_START;
 }
 
+static const char *
+buttonLabel(Graphics_Control control, char *buffer, int size) {
+    if(control.shortcut <= 0 || size <= 0) {
+        return control.label;
+    }
+
+    snprintf(
+        buffer,
+        (size_t)size,
+        "%s [%c]",
+        control.label,
+        toupper(control.shortcut)
+    );
+    return buffer;
+}
+
 static int alignedTextX(
     Graphics_Box box,
     const char *text,
@@ -137,6 +154,14 @@ static int indexForTab(Graphics_ControlGroup group, int tabIndex) {
     return 0;
 }
 
+static int controlCenterX(Graphics_Control control) {
+    return control.bounds.x + control.bounds.width / 2;
+}
+
+static int controlCenterY(Graphics_Control control) {
+    return control.bounds.y + control.bounds.height / 2;
+}
+
 static void focusNext(Graphics_ControlGroup *group) {
     const int currentTab = group->controls[*group->focusedIndex].tabIndex;
     int nextTab = minTabIndex(*group);
@@ -167,6 +192,86 @@ static void focusPrevious(Graphics_ControlGroup *group) {
     }
 
     *group->focusedIndex = indexForTab(*group, previousTab);
+}
+
+static bool controlIsInDirection(
+    Graphics_Control current,
+    Graphics_Control candidate,
+    int horizontal,
+    int vertical
+) {
+    const int currentX = controlCenterX(current);
+    const int currentY = controlCenterY(current);
+    const int candidateX = controlCenterX(candidate);
+    const int candidateY = controlCenterY(candidate);
+
+    if(horizontal < 0) {
+        return candidateX < currentX;
+    }
+
+    if(horizontal > 0) {
+        return candidateX > currentX;
+    }
+
+    if(vertical < 0) {
+        return candidateY < currentY;
+    }
+
+    if(vertical > 0) {
+        return candidateY > currentY;
+    }
+
+    return false;
+}
+
+static int controlDirectionScore(
+    Graphics_Control current,
+    Graphics_Control candidate,
+    int horizontal
+) {
+    const int deltaX = controlCenterX(candidate) - controlCenterX(current);
+    const int deltaY = controlCenterY(candidate) - controlCenterY(current);
+    const int primary = horizontal != 0 ? abs(deltaX) : abs(deltaY);
+    const int secondary = horizontal != 0 ? abs(deltaY) : abs(deltaX);
+
+    return primary * 1000 + secondary;
+}
+
+static bool
+focusDirectional(Graphics_ControlGroup *group, int horizontal, int vertical) {
+    const int currentIndex = *group->focusedIndex;
+    const Graphics_Control current = group->controls[currentIndex];
+    int bestIndex = -1;
+    int bestScore = 0;
+
+    for(int index = 0; index < group->count; index += 1) {
+        int score;
+
+        if(index == currentIndex
+            || !controlIsInDirection(
+                current,
+                group->controls[index],
+                horizontal,
+                vertical
+            )) {
+            continue;
+        }
+
+        score =
+            controlDirectionScore(current, group->controls[index], horizontal);
+
+        if(bestIndex < 0 || score < bestScore) {
+            bestIndex = index;
+            bestScore = score;
+        }
+    }
+
+    if(bestIndex < 0) {
+        return false;
+    }
+
+    *group->focusedIndex = bestIndex;
+    return true;
 }
 
 static void changeControl(Graphics_Control control, int direction) {
@@ -201,7 +306,40 @@ static void changeControl(Graphics_Control control, int direction) {
     }
 }
 
+static bool shortcutMatches(int input, int shortcut) {
+    if(shortcut <= 0 || input <= 0) {
+        return false;
+    }
+
+    return tolower(input) == tolower(shortcut);
+}
+
+static bool
+handleShortcut(Graphics_ControlGroup *group, int input, Runtime_Game *game) {
+    for(int index = 0; index < group->count; index += 1) {
+        Graphics_Control *control = &group->controls[index];
+
+        if(!shortcutMatches(input, control->shortcut)) {
+            continue;
+        }
+
+        *group->focusedIndex = index;
+
+        if(control->type == GRAPHICS_CONTROL_BUTTON
+            && control->data.button.action) {
+            control->data.button.action(game);
+        } else {
+            changeControl(*control, 1);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 static void drawControl(Graphics_Control control, bool focused) {
+    char label[64];
     const int contentX = control.bounds.x + 1;
     const int contentWidth = control.bounds.width - 1;
     const Graphics_Box contentBox = {
@@ -218,13 +356,11 @@ static void drawControl(Graphics_Control control, bool focused) {
     Graphics_drawBox(control.bounds);
 
     if(control.type == GRAPHICS_CONTROL_BUTTON) {
-        const int labelX = alignedTextX(
-            contentBox,
-            control.label,
-            controlLabelAlignment(control)
-        );
+        const char *text = buttonLabel(control, label, sizeof(label));
+        const int labelX =
+            alignedTextX(contentBox, text, controlLabelAlignment(control));
 
-        mvaddnstr(control.bounds.y, labelX, control.label, contentWidth);
+        mvaddnstr(control.bounds.y, labelX, text, contentWidth);
     } else if(control.type == GRAPHICS_CONTROL_INT_INPUT) {
         mvprintw(
             control.bounds.y,
@@ -329,19 +465,34 @@ bool Graphics_handleControlInput(
     *group->focusedIndex = wrappedIndex(*group->focusedIndex, group->count);
     control = &group->controls[*group->focusedIndex];
 
-    if(input == KEY_UP) {
-        focusPrevious(group);
+    if(handleShortcut(group, input, game)) {
         return true;
     }
 
-    if(input == KEY_DOWN || input == '\t') {
+    if(input == KEY_UP) {
+        if(!focusDirectional(group, 0, -1)) {
+            focusPrevious(group);
+        }
+        return true;
+    }
+
+    if(input == KEY_DOWN) {
+        if(!focusDirectional(group, 0, 1)) {
+            focusNext(group);
+        }
+        return true;
+    }
+
+    if(input == '\t') {
         focusNext(group);
         return true;
     }
 
     if(input == KEY_LEFT) {
         if(control->type == GRAPHICS_CONTROL_BUTTON) {
-            focusPrevious(group);
+            if(!focusDirectional(group, -1, 0)) {
+                focusPrevious(group);
+            }
         } else {
             changeControl(*control, -1);
         }
@@ -350,7 +501,9 @@ bool Graphics_handleControlInput(
 
     if(input == KEY_RIGHT) {
         if(control->type == GRAPHICS_CONTROL_BUTTON) {
-            focusNext(group);
+            if(!focusDirectional(group, 1, 0)) {
+                focusNext(group);
+            }
         } else {
             changeControl(*control, 1);
         }

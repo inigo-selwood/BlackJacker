@@ -5,6 +5,8 @@
 
 enum {
     MENU_OPTION_COUNT = 3,
+    MENU_OPTION_GAP = 2,
+    MENU_OPTION_WIDTH = 14,
 };
 
 static Graphics_BlockText bannerText = {
@@ -34,6 +36,8 @@ menuControls(Runtime_Game *game, Graphics_Box box) {
             .label = "TRAIN",
             .labelWidth = 0,
             .labelAlignment = GRAPHICS_ALIGN_CENTER,
+            .width = MENU_OPTION_WIDTH,
+            .shortcut = 't',
             .type = GRAPHICS_CONTROL_BUTTON,
             .data.button = {startPlay},
         },
@@ -41,6 +45,8 @@ menuControls(Runtime_Game *game, Graphics_Box box) {
             .label = "SETTINGS",
             .labelWidth = 0,
             .labelAlignment = GRAPHICS_ALIGN_CENTER,
+            .width = MENU_OPTION_WIDTH,
+            .shortcut = 's',
             .type = GRAPHICS_CONTROL_BUTTON,
             .data.button = {openSettings},
         },
@@ -48,15 +54,28 @@ menuControls(Runtime_Game *game, Graphics_Box box) {
             .label = "QUIT",
             .labelWidth = 0,
             .labelAlignment = GRAPHICS_ALIGN_CENTER,
+            .width = MENU_OPTION_WIDTH,
+            .shortcut = 'q',
             .type = GRAPHICS_CONTROL_BUTTON,
             .data.button = {quitGame},
         },
     };
 
-    Graphics_arrangeControlsWithin(
+    const Graphics_Box row = Graphics_positionWithin(
         box,
-        GRAPHICS_DIRECTION_COLUMN,
-        1,
+        (Graphics_Size){
+            MENU_OPTION_COUNT * MENU_OPTION_WIDTH
+                + (MENU_OPTION_COUNT - 1) * MENU_OPTION_GAP,
+            1,
+        },
+        GRAPHICS_ALIGN_CENTER,
+        GRAPHICS_ALIGN_CENTER
+    );
+
+    Graphics_arrangeControlsWithin(
+        row,
+        GRAPHICS_DIRECTION_ROW,
+        MENU_OPTION_GAP,
         controls,
         MENU_OPTION_COUNT
     );
@@ -82,14 +101,14 @@ void mainMenuCallback(Runtime_Game *game, Runtime_ModeEvent event) {
 
     const Graphics_Box panel = Graphics_positionWithin(
         screen,
-        (Graphics_Size){panelWidth, bannerHeight + 7},
+        (Graphics_Size){panelWidth, bannerHeight + 5},
         GRAPHICS_ALIGN_CENTER,
         GRAPHICS_ALIGN_CENTER
     );
     Graphics_Box sections[3] = {
         {0, 0, 0, bannerHeight},
         {0, 0, 0, 2},
-        {0, 0, 0, MENU_OPTION_COUNT * 2 - 1},
+        {0, 0, 0, 1},
     };
     Graphics_arrangeWithin(panel, GRAPHICS_DIRECTION_COLUMN, 0, sections, 3);
     Graphics_positionBlockTextWithin(

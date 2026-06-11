@@ -208,6 +208,7 @@ struct Graphics_Control {
     int height;
     Graphics_Box bounds;
     int tabIndex;
+    int shortcut;
     Graphics_ControlType type;
     Graphics_Input data;
 };

@@ -2,14 +2,14 @@
 
 #include "modes/play/game.h"
 
-enum { CONTROL_GAP = 2, CONTROL_WIDTH = 11 };
+enum { CONTROL_GAP = 2, CONTROL_WIDTH = 14 };
 
 static void openSettings(Runtime_Game *game) {
     Runtime_queueState(&game->state, MODE_SETTINGS);
 }
 
 static void openGuide(Runtime_Game *game) {
-    (void)game;
+    Runtime_queueState(&game->state, MODE_GUIDE);
 }
 
 static void quitPlay(Runtime_Game *game) {
@@ -20,6 +20,7 @@ static void addAction(
     Graphics_Control *controls,
     int *count,
     const char *label,
+    int shortcut,
     Graphics_ButtonAction action
 ) {
     controls[*count] = (Graphics_Control){
@@ -27,6 +28,7 @@ static void addAction(
         .labelWidth = 0,
         .labelAlignment = GRAPHICS_ALIGN_CENTER,
         .width = CONTROL_WIDTH,
+        .shortcut = shortcut,
         .type = GRAPHICS_CONTROL_BUTTON,
         .data.button = {action},
     };
@@ -63,31 +65,31 @@ Graphics_ControlGroup playControls(Runtime_Game *game, Graphics_Box box) {
     PlayRound *round = &game->playRound;
 
     if(round->phase == ROUND_COMPLETE) {
-        addAction(controls, &count, "NEXT", startNextPlayRound);
+        addAction(controls, &count, "NEXT", 'n', startNextPlayRound);
     } else if(round->phase == ROUND_PLAYER_TURN) {
         if(canHit(game)) {
-            addAction(controls, &count, "HIT", playHit);
+            addAction(controls, &count, "HIT", 'h', playHit);
         }
 
-        addAction(controls, &count, "STAND", playStand);
+        addAction(controls, &count, "STAND", 's', playStand);
 
         if(canDouble(game)) {
-            addAction(controls, &count, "DOUBLE", playDouble);
+            addAction(controls, &count, "DOUBLE", 'd', playDouble);
         }
 
         if(canSplit(game)) {
-            addAction(controls, &count, "SPLIT", playSplit);
+            addAction(controls, &count, "SPLIT", 'p', playSplit);
         }
 
         if(canSurrender(game)) {
-            addAction(controls, &count, "SURRENDER", playSurrender);
+            addAction(controls, &count, "SURRENDER", 'r', playSurrender);
         }
     }
 
     actionCount = count;
-    addAction(controls, &count, "SETTINGS", openSettings);
-    addAction(controls, &count, "GUIDE", openGuide);
-    addAction(controls, &count, "QUIT", quitPlay);
+    addAction(controls, &count, "SETTINGS", 'o', openSettings);
+    addAction(controls, &count, "GUIDE", 'g', openGuide);
+    addAction(controls, &count, "QUIT", 'q', quitPlay);
 
     Graphics_arrangeWithin(box, GRAPHICS_DIRECTION_COLUMN, 1, rows, 2);
     layoutControlRow(controls, actionCount, rows[0]);
