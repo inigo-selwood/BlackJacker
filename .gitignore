@@ -1,4 +1,6 @@
 build/
+*.sqlite3
+!resources/strategy.sqlite3
 
 __pycache__/
 *.py[cod]

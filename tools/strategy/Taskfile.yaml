@@ -4,6 +4,8 @@ vars:
   PYTHON: tools/strategy/.venv/bin/python
   SOURCE_DIR: tools/strategy/source
   TEST_DIR: tools/strategy/test/unit
+  SETTINGS: blackjacker/resources/settings.yaml
+  STRATEGY_DB: resources/strategy.sqlite3
 
 tasks:
   format:
@@ -26,6 +28,18 @@ tasks:
         {{.PYTHON}}
         {{.SOURCE_DIR}}/main.py
         {{.CLI_ARGS}}
+
+  generate:
+    desc: Generate shared strategy SQLite resources
+    dir: ../..
+    cmds:
+      - >-
+        PYTHONPATH={{.SOURCE_DIR}}
+        {{.PYTHON}}
+        {{.SOURCE_DIR}}/main.py
+        {{.SETTINGS}}
+        --output {{.STRATEGY_DB}}
+        --force
 
   test:
     desc: Run strategy checks

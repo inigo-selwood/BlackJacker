@@ -14,6 +14,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 find_package(Curses REQUIRED)
+find_package(SQLite3 REQUIRED)
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
 
 set(CLANG_FORMAT_STYLE
@@ -58,12 +59,14 @@ target_include_directories(blackjacker
         "${CMAKE_SOURCE_DIR}/source"
         "${CURSES_INCLUDE_DIRS}"
         "${YAML_INCLUDE_DIR}"
+        "${SQLite3_INCLUDE_DIRS}"
 )
 
 target_link_libraries(blackjacker
     PRIVATE
         "${CURSES_LIBRARIES}"
         "${YAML_LIBRARY}"
+        SQLite::SQLite3
 )
 
 if(MSVC)
