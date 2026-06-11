@@ -3,7 +3,7 @@ version: '3'
 vars:
   PYTHON: tools/strategy/.venv/bin/python
   SOURCE_DIR: tools/strategy/source
-  TEST_DIR: tools/strategy/unit_test
+  TEST_DIR: tools/strategy/test/unit
 
 tasks:
   format:
@@ -15,6 +15,7 @@ tasks:
         -m black
         --config tools/strategy/pyproject.toml
         {{.SOURCE_DIR}}
+        tools/strategy/test
 
   run:
     desc: Run the strategy generator
@@ -36,3 +37,9 @@ tasks:
         -m compileall
         -q
         {{.SOURCE_DIR}}
+        {{.TEST_DIR}}
+      - >-
+        PYTHONPATH={{.SOURCE_DIR}}
+        {{.PYTHON}}
+        -m pytest
+        {{.TEST_DIR}}
