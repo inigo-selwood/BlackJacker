@@ -33,13 +33,13 @@ cases:
   - hand-kind: hard
     player-total: 16
     dealer-upcard: "10"
-    action: double
+    action: double-hit
     available: true
     ev: -1.129530
   - hand-kind: hard
     player-total: 16
     dealer-upcard: "10"
-    action: surrender
+    action: surrender-hit
     available: true
     ev: -0.5
 
@@ -67,20 +67,20 @@ cases:
   - hand-kind: soft
     player-total: 18
     dealer-upcard: "6"
-    action: double
+    action: double-stand
     available: true
     ev: 0.382807
   
   - hand-kind: pair
     player-total: 16
     dealer-upcard: "6"
-    action: split
+    action: split-stand
     available: true
     ev: 0.406597
   
   - hand-kind: pair
     player-total: 22
     dealer-upcard: "6"
-    action: split
+    action: split-hit
     available: true
     ev: 0.816582

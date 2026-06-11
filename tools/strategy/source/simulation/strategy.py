@@ -172,6 +172,36 @@ def _action_ev(
     return ev.split(context.player_total, context.dealer_rank, rules, shoe)
 
 
+def _best_action(action_values: dict[Action, tuple[bool, float]]) -> Action:
+    """Return the highest-EV available action."""
+    available_actions = [
+        (action, action_ev)
+        for action, (available, action_ev) in action_values.items()
+        if available
+    ]
+    return max(available_actions, key=lambda item: item[1])[0]
+
+
+def _stored_action(
+    action: Action,
+    action_values: dict[Action, tuple[bool, float]],
+) -> str:
+    """Return the action value stored in the strategy database."""
+    available, _ = action_values[action]
+
+    if not available or action in (Action.HIT, Action.STAND):
+        return action.value
+
+    fallback_values = {
+        fallback: value
+        for fallback, value in action_values.items()
+        if fallback in (Action.HIT, Action.STAND)
+    }
+    fallback = _best_action(fallback_values)
+
+    return f"{action.value}-{fallback.value}"
+
+
 def _contexts() -> list[StrategyContext]:
     """Return the first-pass strategy contexts to generate."""
     result: list[StrategyContext] = []
@@ -197,21 +227,25 @@ def expected_values(rules: StrategyRules) -> list[ExpectedValue]:
 
     for context in _contexts():
         shoe = _starting_shoe(rules, context)
+        action_values: dict[Action, tuple[bool, float]] = {}
 
         for action in Action:
             available = _action_available(rules, context, action)
+            action_values[action] = (
+                available,
+                _action_ev(rules, context, action, shoe) if available else 0.0,
+            )
+
+        for action in Action:
+            available, action_ev = action_values[action]
             rows.append(
                 ExpectedValue(
                     hand_kind=orm.to_orm(context.hand_kind),
                     player_total=context.player_total,
                     dealer_upcard=orm.to_orm(context.dealer_rank),
-                    action=orm.to_orm(action),
+                    action=_stored_action(action, action_values),
                     available=available,
-                    ev=(
-                        _action_ev(rules, context, action, shoe)
-                        if available
-                        else 0.0
-                    ),
+                    ev=action_ev,
                 )
             )
 

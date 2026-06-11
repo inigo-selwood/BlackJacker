@@ -48,24 +48,33 @@ class StrategyRules:
     blackjack_payout: BlackjackPayout
 
 
-def _required(data: dict[str, Any], key: str) -> Any:
-    """Return a required YAML value."""
-    if key not in data:
-        raise ValueError(f"Missing required setting: {key}")
-    return data[key]
+_DEFAULT_RULES: dict[str, Any] = {
+    "deck-count": 6,
+    "allow-double-down": True,
+    "allow-double-after-split": True,
+    "double-rule": "any-two",
+    "allow-split": True,
+    "allow-resplit": True,
+    "allow-hit-split-aces": False,
+    "allow-resplit-aces": True,
+    "allow-surrender": False,
+    "use-no-hole-card-rule": False,
+    "dealer-soft-17-rule": "stand",
+    "blackjack-payout": "3-to-2",
+}
 
 
 def _parse_bool(data: dict[str, Any], key: str) -> bool:
-    """Parse a required boolean setting."""
-    value = _required(data, key)
+    """Parse a boolean setting."""
+    value = data[key]
     if not isinstance(value, bool):
         raise ValueError(f"Expected boolean for setting: {key}")
     return value
 
 
 def _parse_int(data: dict[str, Any], key: str) -> int:
-    """Parse a required integer setting."""
-    value = _required(data, key)
+    """Parse an integer setting."""
+    value = data[key]
     if not isinstance(value, int) or isinstance(value, bool):
         raise ValueError(f"Expected integer for setting: {key}")
     return value
@@ -76,8 +85,8 @@ def _parse_enum(
     key: str,
     enum_type: type[StrEnum],
 ) -> Any:
-    """Parse a required string enum setting."""
-    value = _required(data, key)
+    """Parse a string enum setting."""
+    value = data[key]
     if not isinstance(value, str):
         raise ValueError(f"Expected string for setting: {key}")
 
@@ -99,6 +108,8 @@ def load(path: Path) -> StrategyRules:
 
     if not isinstance(rules, dict):
         raise ValueError("Settings YAML rules must contain a mapping.")
+
+    rules = {**_DEFAULT_RULES, **rules}
 
     return StrategyRules(
         deck_count=_parse_int(rules, "deck-count"),

@@ -1,6 +1,7 @@
 #include "strategy.h"
 
 #include <sqlite3.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "table/table.h"
@@ -15,6 +16,7 @@ typedef struct {
     bool available;
     double ev;
     Strategy_Action action;
+    char actionCode[5];
 } StrategyBestAction;
 
 static StrategyBestAction bestActions[STRATEGY_HAND_KIND_COUNT]
@@ -104,22 +106,66 @@ static bool parseAction(const char *text, Strategy_Action *action) {
         return true;
     }
 
-    if(strcmp(text, "double") == 0) {
+    if(strncmp(text, "double", 6) == 0) {
         *action = STRATEGY_ACTION_DOUBLE;
         return true;
     }
 
-    if(strcmp(text, "split") == 0) {
+    if(strncmp(text, "split", 5) == 0) {
         *action = STRATEGY_ACTION_SPLIT;
         return true;
     }
 
-    if(strcmp(text, "surrender") == 0) {
+    if(strncmp(text, "surrender", 9) == 0) {
         *action = STRATEGY_ACTION_SURRENDER;
         return true;
     }
 
     return false;
+}
+
+static const char *actionCode(const char *action) {
+    if(strcmp(action, "stand") == 0) {
+        return "S";
+    }
+
+    if(strcmp(action, "double-hit") == 0) {
+        return "D/H";
+    }
+
+    if(strcmp(action, "double-stand") == 0) {
+        return "D/S";
+    }
+
+    if(strcmp(action, "double") == 0) {
+        return "D";
+    }
+
+    if(strcmp(action, "split-hit") == 0) {
+        return "P/H";
+    }
+
+    if(strcmp(action, "split-stand") == 0) {
+        return "P/S";
+    }
+
+    if(strcmp(action, "split") == 0) {
+        return "P";
+    }
+
+    if(strcmp(action, "surrender-hit") == 0) {
+        return "R/H";
+    }
+
+    if(strcmp(action, "surrender-stand") == 0) {
+        return "R/S";
+    }
+
+    if(strcmp(action, "surrender") == 0) {
+        return "R";
+    }
+
+    return "H";
 }
 
 static bool shouldReplaceBestAction(
@@ -207,6 +253,12 @@ static bool loadDatabasePath(const char *path) {
                 .ev = ev,
                 .action = action,
             };
+            snprintf(
+                current->actionCode,
+                sizeof(current->actionCode),
+                "%s",
+                actionCode(actionText)
+            );
         }
     }
 
@@ -559,6 +611,32 @@ bool Strategy_bestAction(
     }
 
     *action = bestAction.action;
+    return true;
+}
+
+bool Strategy_bestActionCode(
+    Strategy_HandKind handKind,
+    int playerTotal,
+    Table_Rank dealerUpcard,
+    const char **code
+) {
+    const int upcardIndex = dealerUpcardIndex(dealerUpcard);
+    StrategyBestAction bestAction;
+
+    if(!code || !Strategy_loadDatabase() || handKind < 0
+        || handKind >= STRATEGY_HAND_KIND_COUNT || playerTotal < 0
+        || playerTotal >= STRATEGY_TOTAL_COUNT || upcardIndex < 0
+        || upcardIndex >= STRATEGY_DEALER_UPCARD_COUNT) {
+        return false;
+    }
+
+    bestAction = bestActions[handKind][playerTotal][upcardIndex];
+
+    if(!bestAction.available || bestAction.actionCode[0] == '\0') {
+        return false;
+    }
+
+    *code = bestActions[handKind][playerTotal][upcardIndex].actionCode;
     return true;
 }
 

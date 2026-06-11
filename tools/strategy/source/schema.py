@@ -23,8 +23,14 @@ ActionType = Enum(
     "hit",
     "stand",
     "double",
+    "double-hit",
+    "double-stand",
     "split",
+    "split-hit",
+    "split-stand",
     "surrender",
+    "surrender-hit",
+    "surrender-stand",
     name="action",
 )
 

@@ -39,6 +39,14 @@ bool Strategy_bestAction(
     Strategy_Action *action
 );
 
+/** Returns the generated guide-table code for a context, or false. */
+bool Strategy_bestActionCode(
+    Strategy_HandKind handKind,
+    int playerTotal,
+    Table_Rank dealerUpcard,
+    const char **code
+);
+
 /**
  * Returns the rule-aware basic-strategy action for a player hand.
  *
