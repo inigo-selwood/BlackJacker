@@ -72,7 +72,7 @@ def shuffle(shoe: Shoe, deck_count: int, cut_percent: int) -> None:
 
 
 def create(deck_count: int, cut_percent: int) -> Shoe:
-    """Build and shuffle a shoe using the current play settings."""
+    """Build and shuffle a shoe using the requested deck and cut values."""
     shoe = Shoe()
     shuffle(shoe, deck_count, cut_percent)
     return shoe

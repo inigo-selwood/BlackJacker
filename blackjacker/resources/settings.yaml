@@ -1,14 +1,16 @@
-deck-count: 3
-cut-percent: 75
-allow-double-down: true
-allow-double-after-split: true
-double-rule: any-two
-allow-split: true
-allow-resplit: true
-allow-hit-split-aces: false
-allow-resplit-aces: true
-allow-surrender: false
-use-no-hole-card-rule: false
-show-true-count: true
-dealer-soft-17-rule: stand
-blackjack-payout: 3-to-2
+rules:
+  deck-count: 3
+  allow-double-down: true
+  allow-double-after-split: true
+  double-rule: any-two
+  allow-split: true
+  allow-resplit: true
+  allow-hit-split-aces: false
+  allow-resplit-aces: true
+  allow-surrender: false
+  use-no-hole-card-rule: false
+  dealer-soft-17-rule: stand
+  blackjack-payout: 3-to-2
+settings:
+  cut-percent: 75
+  show-true-count: true

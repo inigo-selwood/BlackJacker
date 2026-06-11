@@ -2,7 +2,7 @@
 
 from functools import cache
 
-from settings import PlaySettings
+from settings import StrategyRules
 from simulation.table import dealer
 from simulation.table.card import (
     Card,
@@ -34,7 +34,7 @@ def _add_card(total: int, soft_aces: int, rank: Rank) -> tuple[int, int]:
 def stand(
     player_total: int,
     dealer_rank: Rank,
-    settings: PlaySettings,
+    rules: StrategyRules,
 ) -> float:
     """Return EV for standing on a player total."""
     if player_total > 21:
@@ -42,7 +42,7 @@ def stand(
 
     expected_value = 0.0
     dealer_upcard = Card(rank=dealer_rank, suit=Suit.SPADES)
-    outcomes = dealer.outcomes(dealer_upcard, settings.dealer_soft_17_rule)
+    outcomes = dealer.outcomes(dealer_upcard, rules.dealer_soft_17_rule)
 
     for outcome, probability in outcomes.items():
         if outcome == "bust":
@@ -64,7 +64,7 @@ def hit(
     player_total: int,
     soft_aces: int,
     dealer_rank: Rank,
-    settings: PlaySettings,
+    rules: StrategyRules,
 ) -> float:
     """Return EV for hitting once, then playing hit/stand optimally."""
     expected_value = 0.0
@@ -76,8 +76,8 @@ def hit(
             outcome_ev = -1.0
         else:
             outcome_ev = max(
-                stand(next_total, dealer_rank, settings),
-                hit(next_total, next_soft_aces, dealer_rank, settings),
+                stand(next_total, dealer_rank, rules),
+                hit(next_total, next_soft_aces, dealer_rank, rules),
             )
 
         expected_value += outcome_ev * probability
@@ -90,16 +90,14 @@ def double(
     player_total: int,
     soft_aces: int,
     dealer_rank: Rank,
-    settings: PlaySettings,
+    rules: StrategyRules,
 ) -> float:
     """Return EV for doubling down."""
     expected_value = 0.0
 
     for rank, probability in RANK_PROBABILITIES.items():
         next_total, _ = _add_card(player_total, soft_aces, rank)
-        expected_value += (
-            stand(next_total, dealer_rank, settings) * probability
-        )
+        expected_value += stand(next_total, dealer_rank, rules) * probability
 
     return expected_value * 2.0
 
@@ -107,20 +105,20 @@ def double(
 def _can_resplit(
     pair_rank: Rank,
     hand_count: int,
-    settings: PlaySettings,
+    rules: StrategyRules,
 ) -> bool:
     """Return whether a split hand can be split again."""
-    if hand_count >= MAX_SPLIT_HANDS or not settings.allow_resplit:
+    if hand_count >= MAX_SPLIT_HANDS or not rules.allow_resplit:
         return False
 
-    return pair_rank != Rank.ACE or settings.allow_resplit_aces
+    return pair_rank != Rank.ACE or rules.allow_resplit_aces
 
 
 @cache
 def split(
     pair_total: int,
     dealer_rank: Rank,
-    settings: PlaySettings,
+    rules: StrategyRules,
     hand_count: int = 2,
 ) -> float:
     """Return EV for splitting a pair, including allowed resplits."""
@@ -131,25 +129,25 @@ def split(
     for rank, probability in RANK_PROBABILITIES.items():
         total, soft_aces = _add_card(first_total, first_soft_aces, rank)
 
-        if rank == pair_rank and _can_resplit(pair_rank, hand_count, settings):
+        if rank == pair_rank and _can_resplit(pair_rank, hand_count, rules):
             hand_value = split(
                 pair_total,
                 dealer_rank,
-                settings,
+                rules,
                 hand_count + 1,
             )
-        elif pair_rank == Rank.ACE and not settings.allow_hit_split_aces:
-            hand_value = stand(total, dealer_rank, settings)
+        elif pair_rank == Rank.ACE and not rules.allow_hit_split_aces:
+            hand_value = stand(total, dealer_rank, rules)
         else:
             hand_value = max(
-                stand(total, dealer_rank, settings),
-                hit(total, soft_aces, dealer_rank, settings),
+                stand(total, dealer_rank, rules),
+                hit(total, soft_aces, dealer_rank, rules),
             )
 
-            if settings.allow_double_after_split:
+            if rules.allow_double_after_split:
                 hand_value = max(
                     hand_value,
-                    double(total, soft_aces, dealer_rank, settings),
+                    double(total, soft_aces, dealer_rank, rules),
                 )
 
         expected_hand_value += hand_value * probability

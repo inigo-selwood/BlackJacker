@@ -5,7 +5,7 @@ from enum import StrEnum
 
 import orm
 from schema import ExpectedValue
-from settings import DoubleRule, PlaySettings
+from settings import DoubleRule, StrategyRules
 from simulation import ev
 from simulation.table.card import Rank
 
@@ -62,22 +62,22 @@ def _context_state(context: StrategyContext) -> tuple[int, int]:
     return context.player_total, 0
 
 
-def _double_available(settings: PlaySettings, player_total: int) -> bool:
+def _double_available(rules: StrategyRules, player_total: int) -> bool:
     """Return whether double is legal for a total."""
-    if not settings.allow_double_down:
+    if not rules.allow_double_down:
         return False
 
-    if settings.double_rule == DoubleRule.NINE_TEN_ELEVEN:
+    if rules.double_rule == DoubleRule.NINE_TEN_ELEVEN:
         return 9 <= player_total <= 11
 
-    if settings.double_rule == DoubleRule.TEN_ELEVEN:
+    if rules.double_rule == DoubleRule.TEN_ELEVEN:
         return player_total in (10, 11)
 
     return True
 
 
 def _action_available(
-    settings: PlaySettings,
+    rules: StrategyRules,
     context: StrategyContext,
     action: Action,
 ) -> bool:
@@ -88,16 +88,16 @@ def _action_available(
         return True
 
     if action == Action.DOUBLE:
-        return _double_available(settings, player_total)
+        return _double_available(rules, player_total)
 
     if action == Action.SURRENDER:
-        return settings.allow_surrender
+        return rules.allow_surrender
 
-    return context.hand_kind == HandKind.PAIR and settings.allow_split
+    return context.hand_kind == HandKind.PAIR and rules.allow_split
 
 
 def _action_ev(
-    settings: PlaySettings,
+    rules: StrategyRules,
     context: StrategyContext,
     action: Action,
 ) -> float:
@@ -105,20 +105,18 @@ def _action_ev(
     player_total, soft_aces = _context_state(context)
 
     if action == Action.STAND:
-        return ev.stand(player_total, context.dealer_rank, settings)
+        return ev.stand(player_total, context.dealer_rank, rules)
 
     if action == Action.HIT:
-        return ev.hit(player_total, soft_aces, context.dealer_rank, settings)
+        return ev.hit(player_total, soft_aces, context.dealer_rank, rules)
 
     if action == Action.DOUBLE:
-        return ev.double(
-            player_total, soft_aces, context.dealer_rank, settings
-        )
+        return ev.double(player_total, soft_aces, context.dealer_rank, rules)
 
     if action == Action.SURRENDER:
         return ev.SURRENDER_EV
 
-    return ev.split(context.player_total, context.dealer_rank, settings)
+    return ev.split(context.player_total, context.dealer_rank, rules)
 
 
 def _contexts() -> list[StrategyContext]:
@@ -140,13 +138,13 @@ def _contexts() -> list[StrategyContext]:
     return result
 
 
-def expected_values(settings: PlaySettings) -> list[ExpectedValue]:
+def expected_values(rules: StrategyRules) -> list[ExpectedValue]:
     """Generate first-pass expected value rows."""
     rows: list[ExpectedValue] = []
 
     for context in _contexts():
         for action in Action:
-            available = _action_available(settings, context, action)
+            available = _action_available(rules, context, action)
             rows.append(
                 ExpectedValue(
                     hand_kind=orm.to_orm(context.hand_kind),
@@ -155,7 +153,7 @@ def expected_values(settings: PlaySettings) -> list[ExpectedValue]:
                     action=orm.to_orm(action),
                     available=available,
                     ev=(
-                        _action_ev(settings, context, action)
+                        _action_ev(rules, context, action)
                         if available
                         else 0.0
                     ),

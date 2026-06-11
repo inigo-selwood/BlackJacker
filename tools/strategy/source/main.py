@@ -15,14 +15,14 @@ def main() -> int:
         args.output.unlink()
 
     try:
-        play_settings = settings.load(args.settings)
+        rules = settings.load(args.settings)
     except ValueError as error:
         raise SystemExit(str(error)) from error
 
     schema.create_database(args.output)
     schema.insert_expected_values(
         args.output,
-        strategy.expected_values(play_settings),
+        strategy.expected_values(rules),
     )
     print(f"Created strategy database at {args.output}")
     return 0

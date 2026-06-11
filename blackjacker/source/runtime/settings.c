@@ -209,6 +209,10 @@ applySetting(PlaySettings *settings, const char *key, const char *value) {
     }
 }
 
+static bool isSettingsSection(const char *section) {
+    return stringsEqual(section, "rules") || stringsEqual(section, "settings");
+}
+
 PlaySettings Runtime_defaultPlaySettings(void) {
     return (PlaySettings){
         .deckCount = 6,
@@ -234,6 +238,8 @@ bool Runtime_loadSettings(PlaySettings *settings) {
     yaml_event_t event;
     char key[SETTINGS_BUFFER_SIZE] = {0};
     char value[SETTINGS_BUFFER_SIZE] = {0};
+    char section[SETTINGS_BUFFER_SIZE] = {0};
+    int mappingDepth = 0;
     bool hasKey = false;
     bool done = false;
     bool ok = true;
@@ -257,11 +263,28 @@ bool Runtime_loadSettings(PlaySettings *settings) {
 
         if(event.type == YAML_STREAM_END_EVENT) {
             done = true;
+        } else if(event.type == YAML_MAPPING_START_EVENT) {
+            mappingDepth += 1;
+
+            if(mappingDepth == 2 && hasKey) {
+                snprintf(section, sizeof(section), "%s", key);
+                hasKey = false;
+            }
+        } else if(event.type == YAML_MAPPING_END_EVENT) {
+            if(mappingDepth == 2) {
+                section[0] = '\0';
+            }
+
+            hasKey = false;
+            mappingDepth -= 1;
         } else if(event.type == YAML_SCALAR_EVENT) {
             if(!hasKey) {
                 hasKey = scalarValue(&event, key, sizeof(key));
             } else if(scalarValue(&event, value, sizeof(value))) {
-                applySetting(settings, key, value);
+                if(mappingDepth == 1 || isSettingsSection(section)) {
+                    applySetting(settings, key, value);
+                }
+
                 hasKey = false;
             }
         }
@@ -282,47 +305,57 @@ bool Runtime_saveSettings(const PlaySettings *settings) {
         return false;
     }
 
-    fprintf(file, "deck-count: %d\n", settings->deckCount);
-    fprintf(file, "cut-percent: %d\n", settings->cutPercent);
+    fprintf(file, "rules:\n");
+    fprintf(file, "  deck-count: %d\n", settings->deckCount);
     fprintf(
         file,
-        "allow-double-down: %s\n",
+        "  allow-double-down: %s\n",
         boolText(settings->allowDoubleDown)
     );
     fprintf(
         file,
-        "allow-double-after-split: %s\n",
+        "  allow-double-after-split: %s\n",
         boolText(settings->allowDoubleAfterSplit)
     );
-    fprintf(file, "double-rule: %s\n", doubleRuleText(settings->doubleRule));
-    fprintf(file, "allow-split: %s\n", boolText(settings->allowSplit));
-    fprintf(file, "allow-resplit: %s\n", boolText(settings->allowResplit));
+    fprintf(file, "  double-rule: %s\n", doubleRuleText(settings->doubleRule));
+    fprintf(file, "  allow-split: %s\n", boolText(settings->allowSplit));
+    fprintf(file, "  allow-resplit: %s\n", boolText(settings->allowResplit));
     fprintf(
         file,
-        "allow-hit-split-aces: %s\n",
+        "  allow-hit-split-aces: %s\n",
         boolText(settings->allowHitSplitAces)
     );
     fprintf(
         file,
-        "allow-resplit-aces: %s\n",
+        "  allow-resplit-aces: %s\n",
         boolText(settings->allowResplitAces)
     );
-    fprintf(file, "allow-surrender: %s\n", boolText(settings->allowSurrender));
     fprintf(
         file,
-        "use-no-hole-card-rule: %s\n",
+        "  allow-surrender: %s\n",
+        boolText(settings->allowSurrender)
+    );
+    fprintf(
+        file,
+        "  use-no-hole-card-rule: %s\n",
         boolText(settings->useNoHoleCardRule)
     );
-    fprintf(file, "show-true-count: %s\n", boolText(settings->showTrueCount));
     fprintf(
         file,
-        "dealer-soft-17-rule: %s\n",
+        "  dealer-soft-17-rule: %s\n",
         dealerSoft17RuleText(settings->dealerSoft17Rule)
     );
     fprintf(
         file,
-        "blackjack-payout: %s\n",
+        "  blackjack-payout: %s\n",
         blackjackPayoutText(settings->blackjackPayout)
+    );
+    fprintf(file, "settings:\n");
+    fprintf(file, "  cut-percent: %d\n", settings->cutPercent);
+    fprintf(
+        file,
+        "  show-true-count: %s\n",
+        boolText(settings->showTrueCount)
     );
 
     fclose(file);

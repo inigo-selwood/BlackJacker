@@ -31,11 +31,10 @@ class BlackjackPayout(StrEnum):
 
 
 @dataclass(frozen=True)
-class PlaySettings:
+class StrategyRules:
     """BlackJacker play settings relevant to strategy generation."""
 
     deck_count: int
-    cut_percent: int
     allow_double_down: bool
     allow_double_after_split: bool
     double_rule: DoubleRule
@@ -45,7 +44,6 @@ class PlaySettings:
     allow_resplit_aces: bool
     allow_surrender: bool
     use_no_hole_card_rule: bool
-    show_true_count: bool
     dealer_soft_17_rule: DealerSoft17Rule
     blackjack_payout: BlackjackPayout
 
@@ -89,7 +87,7 @@ def _parse_enum(
         raise ValueError(f"Unsupported value for setting: {key}") from error
 
 
-def load(path: Path) -> PlaySettings:
+def load(path: Path) -> StrategyRules:
     """Load strategy-relevant settings from a YAML file."""
     with path.open("r", encoding="utf-8") as settings_file:
         data = yaml.safe_load(settings_file)
@@ -97,29 +95,32 @@ def load(path: Path) -> PlaySettings:
     if not isinstance(data, dict):
         raise ValueError("Settings YAML must contain a mapping.")
 
-    return PlaySettings(
-        deck_count=_parse_int(data, "deck-count"),
-        cut_percent=_parse_int(data, "cut-percent"),
-        allow_double_down=_parse_bool(data, "allow-double-down"),
+    rules = data.get("rules", data)
+
+    if not isinstance(rules, dict):
+        raise ValueError("Settings YAML rules must contain a mapping.")
+
+    return StrategyRules(
+        deck_count=_parse_int(rules, "deck-count"),
+        allow_double_down=_parse_bool(rules, "allow-double-down"),
         allow_double_after_split=_parse_bool(
-            data,
+            rules,
             "allow-double-after-split",
         ),
-        double_rule=_parse_enum(data, "double-rule", DoubleRule),
-        allow_split=_parse_bool(data, "allow-split"),
-        allow_resplit=_parse_bool(data, "allow-resplit"),
-        allow_hit_split_aces=_parse_bool(data, "allow-hit-split-aces"),
-        allow_resplit_aces=_parse_bool(data, "allow-resplit-aces"),
-        allow_surrender=_parse_bool(data, "allow-surrender"),
-        use_no_hole_card_rule=_parse_bool(data, "use-no-hole-card-rule"),
-        show_true_count=_parse_bool(data, "show-true-count"),
+        double_rule=_parse_enum(rules, "double-rule", DoubleRule),
+        allow_split=_parse_bool(rules, "allow-split"),
+        allow_resplit=_parse_bool(rules, "allow-resplit"),
+        allow_hit_split_aces=_parse_bool(rules, "allow-hit-split-aces"),
+        allow_resplit_aces=_parse_bool(rules, "allow-resplit-aces"),
+        allow_surrender=_parse_bool(rules, "allow-surrender"),
+        use_no_hole_card_rule=_parse_bool(rules, "use-no-hole-card-rule"),
         dealer_soft_17_rule=_parse_enum(
-            data,
+            rules,
             "dealer-soft-17-rule",
             DealerSoft17Rule,
         ),
         blackjack_payout=_parse_enum(
-            data,
+            rules,
             "blackjack-payout",
             BlackjackPayout,
         ),

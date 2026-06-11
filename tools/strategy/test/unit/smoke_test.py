@@ -76,11 +76,14 @@ def _expected_values(
         suite_data = yaml.safe_load(cases_file)
 
     with NamedTemporaryFile("w", encoding="utf-8") as settings_file:
-        yaml.safe_dump(suite_data["settings"], settings_file)
+        settings_data = {
+            key: value for key, value in suite_data.items() if key != "cases"
+        }
+        yaml.safe_dump(settings_data, settings_file)
         settings_file.flush()
-        play_settings = settings.load(Path(settings_file.name))
+        rules = settings.load(Path(settings_file.name))
 
-    rows = strategy.expected_values(play_settings)
+    rows = strategy.expected_values(rules)
     return {
         ExpectedValueKey(
             row.hand_kind,
