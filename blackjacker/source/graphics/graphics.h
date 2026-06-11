@@ -5,7 +5,7 @@
 
 #include "runtime/runtime.h"
 
-enum { MIN_TERMINAL_WIDTH = 80, MIN_TERMINAL_HEIGHT = 26 };
+enum { MIN_TERMINAL_WIDTH = 80, MIN_TERMINAL_HEIGHT = 40 };
 
 /*******************************************************************************
  * Core Geometry
@@ -50,6 +50,12 @@ typedef struct {
 /** Returns the current full terminal box. */
 Graphics_Box Graphics_screenBox(void);
 
+/** Returns the centered minimum-size frame box. */
+Graphics_Box Graphics_minimumFrameBox(void);
+
+/** Returns the usable area inside the minimum-size frame. */
+Graphics_Box Graphics_minimumContentBox(void);
+
 /** Returns a box inset by padding. */
 Graphics_Box Graphics_inset(Graphics_Box box, Graphics_Padding padding);
 
@@ -75,6 +81,12 @@ void Graphics_drawBox(Graphics_Box box);
 
 /** Draws a horizontal divider across a box's first row. */
 void Graphics_drawHorizontalDivider(Graphics_Box box);
+
+/** Draws the centered minimum-size reference frame when it fits. */
+void Graphics_drawMinimumFrame(void);
+
+/** Draws frame labels and copyright chrome. */
+void Graphics_drawFrameChrome(const char *modeName);
 
 /*******************************************************************************
  * Tables

@@ -1,6 +1,15 @@
 #include "graphics/graphics.h"
 
 #include <curses.h>
+#include <string.h>
+
+#ifdef A_ITALIC
+#define FRAME_ITALIC_ATTR A_ITALIC
+#else
+#define FRAME_ITALIC_ATTR 0
+#endif
+
+static const char *COPYRIGHT_TEXT = "Inigo Selwood 2026 (c)";
 
 static int clampedSize(int value) {
     return value < 0 ? 0 : value;
@@ -27,6 +36,22 @@ Graphics_Box Graphics_screenBox(void) {
 
     const Graphics_Box box = {0, 0, width, height};
     return box;
+}
+
+Graphics_Box Graphics_minimumFrameBox(void) {
+    return Graphics_positionWithin(
+        Graphics_screenBox(),
+        (Graphics_Size){MIN_TERMINAL_WIDTH, MIN_TERMINAL_HEIGHT},
+        GRAPHICS_ALIGN_CENTER,
+        GRAPHICS_ALIGN_CENTER
+    );
+}
+
+Graphics_Box Graphics_minimumContentBox(void) {
+    return Graphics_inset(
+        Graphics_minimumFrameBox(),
+        (Graphics_Padding){1, 2, 1, 2}
+    );
 }
 
 Graphics_Box Graphics_inset(Graphics_Box box, Graphics_Padding padding) {
@@ -168,5 +193,59 @@ void Graphics_drawBox(Graphics_Box box) {
 void Graphics_drawHorizontalDivider(Graphics_Box box) {
     for(int col = 0; col < box.width; col += 1) {
         mvaddstr(box.y, box.x + col, "─");
+    }
+}
+
+void Graphics_drawMinimumFrame(void) {
+    const Graphics_Box screen = Graphics_screenBox();
+    const Graphics_Box frame = Graphics_minimumFrameBox();
+
+    if(screen.width < MIN_TERMINAL_WIDTH
+        || screen.height < MIN_TERMINAL_HEIGHT) {
+        return;
+    }
+
+    mvaddstr(frame.y, frame.x, "╭");
+    mvaddstr(frame.y, frame.x + frame.width - 1, "╮");
+    mvaddstr(frame.y + frame.height - 1, frame.x, "╰");
+    mvaddstr(frame.y + frame.height - 1, frame.x + frame.width - 1, "╯");
+
+    for(int col = 1; col < frame.width - 1; col += 1) {
+        mvaddstr(frame.y, frame.x + col, "─");
+        mvaddstr(frame.y + frame.height - 1, frame.x + col, "─");
+    }
+
+    for(int row = 1; row < frame.height - 1; row += 1) {
+        mvaddstr(frame.y + row, frame.x, "│");
+        mvaddstr(frame.y + row, frame.x + frame.width - 1, "│");
+    }
+}
+
+void Graphics_drawFrameChrome(const char *modeName) {
+    const Graphics_Box screen = Graphics_screenBox();
+    const Graphics_Box frame = Graphics_minimumFrameBox();
+    const int modeWidth = modeName ? (int)strlen(modeName) : 0;
+    const int copyrightWidth = (int)strlen(COPYRIGHT_TEXT);
+
+    if(screen.width < MIN_TERMINAL_WIDTH
+        || screen.height < MIN_TERMINAL_HEIGHT) {
+        return;
+    }
+
+    if(modeWidth > 0 && modeWidth < frame.width - 4) {
+        attron(A_BOLD);
+        mvaddnstr(frame.y, frame.x + 2, modeName, modeWidth);
+        attroff(A_BOLD);
+    }
+
+    if(copyrightWidth < frame.width - 4) {
+        attron(FRAME_ITALIC_ATTR);
+        mvaddnstr(
+            frame.y,
+            frame.x + frame.width - copyrightWidth - 2,
+            COPYRIGHT_TEXT,
+            copyrightWidth
+        );
+        attroff(FRAME_ITALIC_ATTR);
     }
 }

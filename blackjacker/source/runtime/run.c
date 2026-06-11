@@ -29,6 +29,24 @@ static Runtime_Mode activeMode(Runtime_Game *game) {
     return game->state.mode;
 }
 
+static const char *modeName(Runtime_Mode mode) {
+    switch(mode) {
+    case MODE_NOTICE:
+        return "NOTICE";
+    case MODE_MENU:
+        return "MENU";
+    case MODE_SETTINGS:
+        return "SETTINGS";
+    case MODE_PLAY:
+        return "TRAIN";
+    case MODE_GUIDE:
+        return "GUIDE";
+    case MODE_COUNT:
+    default:
+        return "";
+    }
+}
+
 void Runtime_runGame(Runtime_Game *game) {
     registerStates();
 
@@ -37,8 +55,8 @@ void Runtime_runGame(Runtime_Game *game) {
 
         Runtime_applyQueuedState(&game->state);
 
-        Runtime_ModeCallback callback =
-            Runtime_stateCallback(activeMode(game));
+        Runtime_Mode mode = activeMode(game);
+        Runtime_ModeCallback callback = Runtime_stateCallback(mode);
 
         clear();
 
@@ -51,6 +69,8 @@ void Runtime_runGame(Runtime_Game *game) {
             );
         }
 
+        Graphics_drawMinimumFrame();
+        Graphics_drawFrameChrome(modeName(mode));
         refresh();
 
         input = getch();
