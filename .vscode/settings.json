@@ -1,0 +1,14 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+  "black-formatter.args": [
+    "--config",
+    "${workspaceFolder}/tools/strategy/pyproject.toml"
+  ],
+  "black-formatter.path": [
+    "${workspaceFolder}/tools/strategy/.venv/bin/black"
+  ],
+  "editor.formatOnSave": true
+}

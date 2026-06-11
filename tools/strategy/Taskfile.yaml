@@ -6,14 +6,33 @@ vars:
   TEST_DIR: tools/strategy/unit_test
 
 tasks:
+  format:
+    desc: Format strategy Python source
+    dir: ../..
+    cmds:
+      - >-
+        {{.PYTHON}}
+        -m black
+        --config tools/strategy/pyproject.toml
+        {{.SOURCE_DIR}}
+
   run:
     desc: Run the strategy generator
     dir: ../..
     cmds:
-      - "PYTHONPATH={{.SOURCE_DIR}} {{.PYTHON}} {{.SOURCE_DIR}}/main.py {{.CLI_ARGS}}"
+      - >-
+        PYTHONPATH={{.SOURCE_DIR}}
+        {{.PYTHON}}
+        {{.SOURCE_DIR}}/main.py
+        {{.CLI_ARGS}}
 
   test:
     desc: Run strategy checks
     dir: ../..
     cmds:
-      - "PYTHONPATH={{.SOURCE_DIR}} {{.PYTHON}} -m py_compile {{.SOURCE_DIR}}/main.py {{.SOURCE_DIR}}/arguments.py {{.SOURCE_DIR}}/schema.py {{.SOURCE_DIR}}/settings.py {{.SOURCE_DIR}}/simulation/strategy.py"
+      - >-
+        PYTHONPATH={{.SOURCE_DIR}}
+        {{.PYTHON}}
+        -m compileall
+        -q
+        {{.SOURCE_DIR}}

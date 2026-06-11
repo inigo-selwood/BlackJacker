@@ -10,14 +10,22 @@ tasks:
   configure:
     desc: Configure BlackJacker with Ninja
     cmds:
-      - cmake --fresh -S . -B {{.BUILD_DIR}} -G {{.GENERATOR}}
+      - >-
+        cmake
+        --fresh
+        -S .
+        -B {{.BUILD_DIR}}
+        -G {{.GENERATOR}}
 
   build:
     desc: Format and build BlackJacker
     deps:
       - format
     cmds:
-      - cmake --build {{.BUILD_DIR}} --parallel
+      - >-
+        cmake
+        --build {{.BUILD_DIR}}
+        --parallel
 
   run:
     desc: Build and run BlackJacker
@@ -37,7 +45,11 @@ tasks:
     deps:
       - configure
     cmds:
-      - cmake --build {{.BUILD_DIR}} --target format --parallel
+      - >-
+        cmake
+        --build {{.BUILD_DIR}}
+        --target format
+        --parallel
 
   clean:
     desc: Remove generated build artifacts
