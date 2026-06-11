@@ -3,24 +3,14 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
+import orm
 from schema import ExpectedValue
 from settings import DealerSoft17Rule, PlaySettings
+from simulation import ev
+from simulation.table.card import Card, Rank, Suit, rank_value
 
 
-class StrategyEnum(StrEnum):
-    """String enum with storage helpers."""
-
-    def serialize(self) -> str:
-        """Return the value stored in SQLite."""
-        return self.value
-
-    @classmethod
-    def values(cls) -> list[str]:
-        """Return all serialized enum values."""
-        return [item.serialize() for item in cls]
-
-
-class HandKind(StrategyEnum):
+class HandKind(StrEnum):
     """Player hand category used for strategy lookup."""
 
     HARD = "hard"
@@ -28,22 +18,7 @@ class HandKind(StrategyEnum):
     PAIR = "pair"
 
 
-class DealerUpcard(StrategyEnum):
-    """Dealer upcard values used for strategy lookup."""
-
-    TWO = "2"
-    THREE = "3"
-    FOUR = "4"
-    FIVE = "5"
-    SIX = "6"
-    SEVEN = "7"
-    EIGHT = "8"
-    NINE = "9"
-    TEN = "10"
-    ACE = "ace"
-
-
-class Action(StrategyEnum):
+class Action(StrEnum):
     """Player actions with expected values."""
 
     HIT = "hit"
@@ -52,20 +27,28 @@ class Action(StrategyEnum):
     SPLIT = "split"
     SURRENDER = "surrender"
 
+
+DEALER_RANKS = [
+    Rank.TWO,
+    Rank.THREE,
+    Rank.FOUR,
+    Rank.FIVE,
+    Rank.SIX,
+    Rank.SEVEN,
+    Rank.EIGHT,
+    Rank.NINE,
+    Rank.TEN,
+    Rank.ACE,
+]
+
+
 @dataclass(frozen=True)
 class StrategyContext:
     """Strategy decision context for one lookup row."""
 
     hand_kind: HandKind
     player_total: int
-    dealer_upcard: DealerUpcard
-
-
-def dealer_value(upcard: DealerUpcard) -> int:
-    """Return the numeric strategy value for a dealer upcard."""
-    if upcard == DealerUpcard.ACE:
-        return 11
-    return int(upcard.serialize())
+    dealer_rank: Rank
 
 
 def double_or_hit(settings: PlaySettings, total: int) -> Action:
@@ -95,13 +78,11 @@ def split_or_fallback(settings: PlaySettings, fallback: Action) -> Action:
 def hard_action(
     settings: PlaySettings,
     total: int,
-    upcard: DealerUpcard,
+    dealer_rank: Rank,
 ) -> Action:
     """Return a first-pass basic strategy action for a hard total."""
-    dealer = dealer_value(upcard)
-    dealer_hits_soft_17 = (
-        settings.dealer_soft_17_rule == DealerSoft17Rule.HIT
-    )
+    dealer = rank_value(dealer_rank)
+    dealer_hits_soft_17 = settings.dealer_soft_17_rule == DealerSoft17Rule.HIT
 
     if total >= 17:
         return Action.STAND
@@ -128,10 +109,14 @@ def hard_action(
         return double_or_hit(settings, total)
 
     if total == 10:
-        return double_or_hit(settings, total) if 2 <= dealer <= 9 else Action.HIT
+        return (
+            double_or_hit(settings, total) if 2 <= dealer <= 9 else Action.HIT
+        )
 
     if total == 9:
-        return double_or_hit(settings, total) if 3 <= dealer <= 6 else Action.HIT
+        return (
+            double_or_hit(settings, total) if 3 <= dealer <= 6 else Action.HIT
+        )
 
     return Action.HIT
 
@@ -139,13 +124,11 @@ def hard_action(
 def soft_action(
     settings: PlaySettings,
     total: int,
-    upcard: DealerUpcard,
+    dealer_rank: Rank,
 ) -> Action:
     """Return a first-pass basic strategy action for a soft total."""
-    dealer = dealer_value(upcard)
-    dealer_hits_soft_17 = (
-        settings.dealer_soft_17_rule == DealerSoft17Rule.HIT
-    )
+    dealer = rank_value(dealer_rank)
+    dealer_hits_soft_17 = settings.dealer_soft_17_rule == DealerSoft17Rule.HIT
 
     if total >= 20:
         return Action.STAND
@@ -186,14 +169,17 @@ def soft_action(
 def pair_action(
     settings: PlaySettings,
     total: int,
-    upcard: DealerUpcard,
+    dealer_rank: Rank,
 ) -> Action:
     """Return a first-pass basic strategy action for a pair total."""
-    dealer = dealer_value(upcard)
+    dealer = rank_value(dealer_rank)
     double_after_split = settings.allow_double_after_split
 
     if total in (12, 22):
-        return split_or_fallback(settings, hard_action(settings, total, upcard))
+        return split_or_fallback(
+            settings,
+            hard_action(settings, total, dealer_rank),
+        )
 
     if total == 20:
         return Action.STAND
@@ -209,7 +195,7 @@ def pair_action(
         return Action.HIT
 
     if total == 10:
-        return hard_action(settings, total, upcard)
+        return hard_action(settings, total, dealer_rank)
 
     if total == 8:
         if double_after_split and 5 <= dealer <= 6:
@@ -222,20 +208,23 @@ def pair_action(
         return Action.HIT
 
     if total == 16:
-        return split_or_fallback(settings, hard_action(settings, total, upcard))
+        return split_or_fallback(
+            settings,
+            hard_action(settings, total, dealer_rank),
+        )
 
-    return hard_action(settings, total, upcard)
+    return hard_action(settings, total, dealer_rank)
 
 
 def best_action(settings: PlaySettings, context: StrategyContext) -> Action:
     """Return the best first-pass action for a strategy context."""
     if context.hand_kind == HandKind.HARD:
-        return hard_action(settings, context.player_total, context.dealer_upcard)
+        return hard_action(settings, context.player_total, context.dealer_rank)
 
     if context.hand_kind == HandKind.SOFT:
-        return soft_action(settings, context.player_total, context.dealer_upcard)
+        return soft_action(settings, context.player_total, context.dealer_rank)
 
-    return pair_action(settings, context.player_total, context.dealer_upcard)
+    return pair_action(settings, context.player_total, context.dealer_rank)
 
 
 def contexts() -> list[StrategyContext]:
@@ -243,16 +232,16 @@ def contexts() -> list[StrategyContext]:
     result: list[StrategyContext] = []
 
     for total in range(5, 22):
-        for upcard in DealerUpcard:
-            result.append(StrategyContext(HandKind.HARD, total, upcard))
+        for rank in DEALER_RANKS:
+            result.append(StrategyContext(HandKind.HARD, total, rank))
 
     for total in range(13, 22):
-        for upcard in DealerUpcard:
-            result.append(StrategyContext(HandKind.SOFT, total, upcard))
+        for rank in DEALER_RANKS:
+            result.append(StrategyContext(HandKind.SOFT, total, rank))
 
     for total in range(4, 23, 2):
-        for upcard in DealerUpcard:
-            result.append(StrategyContext(HandKind.PAIR, total, upcard))
+        for rank in DEALER_RANKS:
+            result.append(StrategyContext(HandKind.PAIR, total, rank))
 
     return result
 
@@ -265,13 +254,22 @@ def expected_values(settings: PlaySettings) -> list[ExpectedValue]:
         selected_action = best_action(settings, context)
 
         for action in Action:
+            action_ev = 1.0 if action == selected_action else 0.0
+
+            if action == Action.STAND:
+                action_ev = ev.stand(
+                    context.player_total,
+                    Card(rank=context.dealer_rank, suit=Suit.SPADES),
+                    settings,
+                )
+
             rows.append(
                 ExpectedValue(
-                    hand_kind=context.hand_kind.serialize(),
+                    hand_kind=orm.to_orm(context.hand_kind),
                     player_total=context.player_total,
-                    dealer_upcard=context.dealer_upcard.serialize(),
-                    action=action.serialize(),
-                    ev=1.0 if action == selected_action else 0.0,
+                    dealer_upcard=orm.to_orm(context.dealer_rank),
+                    action=orm.to_orm(action),
+                    ev=action_ev,
                 )
             )
 

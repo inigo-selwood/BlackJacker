@@ -31,12 +31,6 @@ def clamp(value: int, minimum: int, maximum: int) -> int:
     return value
 
 
-def next_random(shoe: Shoe) -> int:
-    """Return the next deterministic random value."""
-    shoe.seed = (shoe.seed * 1103515245 + 12345) & 0xFFFFFFFF
-    return shoe.seed
-
-
 def add_deck(shoe: Shoe) -> None:
     """Add one ordered deck to a shoe."""
     for suit in Suit:
@@ -47,7 +41,9 @@ def add_deck(shoe: Shoe) -> None:
 def shuffle_cards(shoe: Shoe) -> None:
     """Shuffle cards using the same deterministic generator as the C app."""
     for index in range(len(shoe.cards) - 1, 0, -1):
-        swap_index = next_random(shoe) % (index + 1)
+        # Match the C app's simple linear congruential generator.
+        shoe.seed = (shoe.seed * 1103515245 + 12345) & 0xFFFFFFFF
+        swap_index = shoe.seed % (index + 1)
         shoe.cards[index], shoe.cards[swap_index] = (
             shoe.cards[swap_index],
             shoe.cards[index],

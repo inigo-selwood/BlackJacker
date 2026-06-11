@@ -22,6 +22,17 @@ class Rank(IntEnum):
     KING = 13
 
 
+def rank_value(rank: Rank) -> int:
+    """Return the blackjack strategy value for a rank."""
+    if rank == Rank.ACE:
+        return 11
+
+    if rank >= Rank.TEN:
+        return 10
+
+    return int(rank)
+
+
 class Suit(IntEnum):
     """Card suit."""
 
@@ -37,51 +48,3 @@ class Card:
 
     rank: Rank
     suit: Suit
-
-
-def rank_label(rank: Rank) -> str:
-    """Return the compact display label for a rank."""
-    if rank == Rank.ACE:
-        return "A"
-
-    if rank == Rank.JACK:
-        return "J"
-
-    if rank == Rank.QUEEN:
-        return "Q"
-
-    if rank == Rank.KING:
-        return "K"
-
-    return str(int(rank))
-
-
-def suit_letter(suit: Suit) -> str:
-    """Return the one-letter display label for a suit."""
-    return {
-        Suit.SPADES: "S",
-        Suit.HEARTS: "H",
-        Suit.DIAMONDS: "D",
-        Suit.CLUBS: "C",
-    }[suit]
-
-
-def suit_symbol(suit: Suit) -> str:
-    """Return the UTF-8 glyph for a suit."""
-    return {
-        Suit.SPADES: "♠",
-        Suit.HEARTS: "♥",
-        Suit.DIAMONDS: "♦",
-        Suit.CLUBS: "♣",
-    }[suit]
-
-
-def rank_value(rank: Rank) -> int:
-    """Return the blackjack strategy value for a rank."""
-    if rank == Rank.ACE:
-        return 11
-
-    if rank >= Rank.TEN:
-        return 10
-
-    return int(rank)

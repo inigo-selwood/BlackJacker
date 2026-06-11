@@ -49,14 +49,9 @@ class ExpectedValue(Base):
     ev: Mapped[float] = mapped_column(Float, nullable=False)
 
 
-def sqlite_url(path: Path) -> str:
-    """Return a SQLAlchemy SQLite URL for a filesystem path."""
-    return f"sqlite:///{path}"
-
-
 def create_database(output_path: Path) -> None:
     """Create an empty strategy database schema."""
-    engine = create_engine(sqlite_url(output_path))
+    engine = create_engine(f"sqlite:///{output_path}")
     Base.metadata.create_all(engine)
 
 
@@ -65,7 +60,7 @@ def insert_expected_values(
     expected_values: list[ExpectedValue],
 ) -> None:
     """Insert expected value rows into a strategy database."""
-    engine = create_engine(sqlite_url(output_path))
+    engine = create_engine(f"sqlite:///{output_path}")
 
     with Session(engine) as session:
         session.add_all(expected_values)
