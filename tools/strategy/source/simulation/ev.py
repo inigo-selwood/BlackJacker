@@ -1,13 +1,38 @@
 """Expected value calculation helpers."""
 
+from functools import cache
+
 from settings import PlaySettings
-from simulation import dealer
-from simulation.table.card import Card
+from simulation.table import dealer
+from simulation.table.card import (
+    Card,
+    RANK_PROBABILITIES,
+    Rank,
+    Suit,
+    rank_value,
+)
+
+SURRENDER_EV = -0.5
 
 
+def _add_card(total: int, soft_aces: int, rank: Rank) -> tuple[int, int]:
+    """Return a player total after drawing one rank."""
+    total += rank_value(rank)
+
+    if rank == Rank.ACE:
+        soft_aces += 1
+
+    while total > 21 and soft_aces > 0:
+        total -= 10
+        soft_aces -= 1
+
+    return total, soft_aces
+
+
+@cache
 def stand(
     player_total: int,
-    dealer_upcard: Card,
+    dealer_rank: Rank,
     settings: PlaySettings,
 ) -> float:
     """Return EV for standing on a player total."""
@@ -15,6 +40,7 @@ def stand(
         return -1.0
 
     expected_value = 0.0
+    dealer_upcard = Card(rank=dealer_rank, suit=Suit.SPADES)
     outcomes = dealer.outcomes(dealer_upcard, settings.dealer_soft_17_rule)
 
     for outcome, probability in outcomes.items():
@@ -30,3 +56,81 @@ def stand(
             expected_value -= probability
 
     return expected_value
+
+
+@cache
+def hit(
+    player_total: int,
+    soft_aces: int,
+    dealer_rank: Rank,
+    settings: PlaySettings,
+) -> float:
+    """Return EV for hitting once, then playing hit/stand optimally."""
+    expected_value = 0.0
+
+    for rank, probability in RANK_PROBABILITIES.items():
+        next_total, next_soft_aces = _add_card(player_total, soft_aces, rank)
+
+        if next_total > 21:
+            outcome_ev = -1.0
+        else:
+            outcome_ev = max(
+                stand(next_total, dealer_rank, settings),
+                hit(next_total, next_soft_aces, dealer_rank, settings),
+            )
+
+        expected_value += outcome_ev * probability
+
+    return expected_value
+
+
+@cache
+def double(
+    player_total: int,
+    soft_aces: int,
+    dealer_rank: Rank,
+    settings: PlaySettings,
+) -> float:
+    """Return EV for doubling down."""
+    expected_value = 0.0
+
+    for rank, probability in RANK_PROBABILITIES.items():
+        next_total, _ = _add_card(player_total, soft_aces, rank)
+        expected_value += (
+            stand(next_total, dealer_rank, settings) * probability
+        )
+
+    return expected_value * 2.0
+
+
+@cache
+def split(
+    pair_total: int,
+    dealer_rank: Rank,
+    settings: PlaySettings,
+) -> float:
+    """Return EV for splitting once, without resplit recursion."""
+    pair_rank = Rank.ACE if pair_total == 22 else Rank(pair_total // 2)
+    first_total, first_soft_aces = _add_card(0, 0, pair_rank)
+    expected_hand_value = 0.0
+
+    for rank, probability in RANK_PROBABILITIES.items():
+        total, soft_aces = _add_card(first_total, first_soft_aces, rank)
+
+        if pair_rank == Rank.ACE and not settings.allow_hit_split_aces:
+            hand_value = stand(total, dealer_rank, settings)
+        else:
+            hand_value = max(
+                stand(total, dealer_rank, settings),
+                hit(total, soft_aces, dealer_rank, settings),
+            )
+
+            if settings.allow_double_after_split:
+                hand_value = max(
+                    hand_value,
+                    double(total, soft_aces, dealer_rank, settings),
+                )
+
+        expected_hand_value += hand_value * probability
+
+    return expected_hand_value * 2.0

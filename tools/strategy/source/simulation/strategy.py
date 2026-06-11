@@ -5,9 +5,9 @@ from enum import StrEnum
 
 import orm
 from schema import ExpectedValue
-from settings import DealerSoft17Rule, PlaySettings
+from settings import PlaySettings
 from simulation import ev
-from simulation.table.card import Card, Rank, Suit, rank_value
+from simulation.table.card import Rank
 
 
 class HandKind(StrEnum):
@@ -28,7 +28,7 @@ class Action(StrEnum):
     SURRENDER = "surrender"
 
 
-DEALER_RANKS = [
+_DEALER_RANKS = [
     Rank.TWO,
     Rank.THREE,
     Rank.FOUR,
@@ -51,196 +51,59 @@ class StrategyContext:
     dealer_rank: Rank
 
 
-def double_or_hit(settings: PlaySettings, total: int) -> Action:
-    """Return double if the configured double rule permits it."""
-    if not settings.allow_double_down:
-        return Action.HIT
-
-    if settings.double_rule == "9-10-11":
-        return Action.DOUBLE if 9 <= total <= 11 else Action.HIT
-
-    if settings.double_rule == "10-11":
-        return Action.DOUBLE if total in (10, 11) else Action.HIT
-
-    return Action.DOUBLE
-
-
-def surrender_or_hit(settings: PlaySettings) -> Action:
-    """Return surrender if available, otherwise hit."""
-    return Action.SURRENDER if settings.allow_surrender else Action.HIT
-
-
-def split_or_fallback(settings: PlaySettings, fallback: Action) -> Action:
-    """Return split if available, otherwise the fallback action."""
-    return Action.SPLIT if settings.allow_split else fallback
-
-
-def hard_action(
-    settings: PlaySettings,
-    total: int,
-    dealer_rank: Rank,
-) -> Action:
-    """Return a first-pass basic strategy action for a hard total."""
-    dealer = rank_value(dealer_rank)
-    dealer_hits_soft_17 = settings.dealer_soft_17_rule == DealerSoft17Rule.HIT
-
-    if total >= 17:
-        return Action.STAND
-
-    if total == 16:
-        if dealer >= 9:
-            return surrender_or_hit(settings)
-        return Action.STAND if 2 <= dealer <= 6 else Action.HIT
-
-    if total == 15:
-        if dealer == 10 or (dealer == 11 and dealer_hits_soft_17):
-            return surrender_or_hit(settings)
-        return Action.STAND if 2 <= dealer <= 6 else Action.HIT
-
-    if total >= 13:
-        return Action.STAND if 2 <= dealer <= 6 else Action.HIT
-
-    if total == 12:
-        return Action.STAND if 4 <= dealer <= 6 else Action.HIT
-
-    if total == 11:
-        if dealer == 11 and not dealer_hits_soft_17:
-            return Action.HIT
-        return double_or_hit(settings, total)
-
-    if total == 10:
-        return (
-            double_or_hit(settings, total) if 2 <= dealer <= 9 else Action.HIT
-        )
-
-    if total == 9:
-        return (
-            double_or_hit(settings, total) if 3 <= dealer <= 6 else Action.HIT
-        )
-
-    return Action.HIT
-
-
-def soft_action(
-    settings: PlaySettings,
-    total: int,
-    dealer_rank: Rank,
-) -> Action:
-    """Return a first-pass basic strategy action for a soft total."""
-    dealer = rank_value(dealer_rank)
-    dealer_hits_soft_17 = settings.dealer_soft_17_rule == DealerSoft17Rule.HIT
-
-    if total >= 20:
-        return Action.STAND
-
-    if total == 19:
-        if dealer == 6 and dealer_hits_soft_17:
-            return double_or_hit(settings, total)
-        return Action.STAND
-
-    if total == 18:
-        if 3 <= dealer <= 6:
-            return double_or_hit(settings, total)
-        if dealer == 2 and dealer_hits_soft_17:
-            return double_or_hit(settings, total)
-        return Action.STAND if dealer in (7, 8) else Action.HIT
-
-    if total == 17:
-        if 3 <= dealer <= 6:
-            return double_or_hit(settings, total)
-        if dealer == 2 and dealer_hits_soft_17:
-            return double_or_hit(settings, total)
-        return Action.HIT
-
-    if total in (15, 16):
-        if 4 <= dealer <= 6:
-            return double_or_hit(settings, total)
-        return Action.HIT
-
-    if total in (13, 14):
-        if 5 <= dealer <= 6:
-            return double_or_hit(settings, total)
-        if dealer == 4 and dealer_hits_soft_17:
-            return double_or_hit(settings, total)
-
-    return Action.HIT
-
-
-def pair_action(
-    settings: PlaySettings,
-    total: int,
-    dealer_rank: Rank,
-) -> Action:
-    """Return a first-pass basic strategy action for a pair total."""
-    dealer = rank_value(dealer_rank)
-    double_after_split = settings.allow_double_after_split
-
-    if total in (12, 22):
-        return split_or_fallback(
-            settings,
-            hard_action(settings, total, dealer_rank),
-        )
-
-    if total == 20:
-        return Action.STAND
-
-    if total == 18:
-        if (2 <= dealer <= 6) or dealer in (8, 9):
-            return split_or_fallback(settings, Action.STAND)
-        return Action.STAND
-
-    if total == 14:
-        if 2 <= dealer <= 7:
-            return split_or_fallback(settings, Action.HIT)
-        return Action.HIT
-
-    if total == 10:
-        return hard_action(settings, total, dealer_rank)
-
-    if total == 8:
-        if double_after_split and 5 <= dealer <= 6:
-            return split_or_fallback(settings, Action.HIT)
-        return Action.HIT
-
-    if total == 6 or total == 4:
-        if (4 <= dealer <= 7) or (double_after_split and 2 <= dealer <= 3):
-            return split_or_fallback(settings, Action.HIT)
-        return Action.HIT
-
-    if total == 16:
-        return split_or_fallback(
-            settings,
-            hard_action(settings, total, dealer_rank),
-        )
-
-    return hard_action(settings, total, dealer_rank)
-
-
-def best_action(settings: PlaySettings, context: StrategyContext) -> Action:
-    """Return the best first-pass action for a strategy context."""
-    if context.hand_kind == HandKind.HARD:
-        return hard_action(settings, context.player_total, context.dealer_rank)
-
+def _context_state(context: StrategyContext) -> tuple[int, int]:
+    """Return blackjack total and soft ace count for EV calculation."""
     if context.hand_kind == HandKind.SOFT:
-        return soft_action(settings, context.player_total, context.dealer_rank)
+        return context.player_total, 1
 
-    return pair_action(settings, context.player_total, context.dealer_rank)
+    if context.hand_kind == HandKind.PAIR and context.player_total == 22:
+        return 12, 1
+
+    return context.player_total, 0
 
 
-def contexts() -> list[StrategyContext]:
+def _action_ev(
+    settings: PlaySettings,
+    context: StrategyContext,
+    action: Action,
+) -> float:
+    """Return EV for one action in a strategy context."""
+    player_total, soft_aces = _context_state(context)
+
+    if action == Action.STAND:
+        return ev.stand(player_total, context.dealer_rank, settings)
+
+    if action == Action.HIT:
+        return ev.hit(player_total, soft_aces, context.dealer_rank, settings)
+
+    if action == Action.DOUBLE:
+        return ev.double(
+            player_total, soft_aces, context.dealer_rank, settings
+        )
+
+    if action == Action.SURRENDER:
+        return ev.SURRENDER_EV
+
+    if context.hand_kind != HandKind.PAIR or not settings.allow_split:
+        return 0.0
+
+    return ev.split(context.player_total, context.dealer_rank, settings)
+
+
+def _contexts() -> list[StrategyContext]:
     """Return the first-pass strategy contexts to generate."""
     result: list[StrategyContext] = []
 
     for total in range(5, 22):
-        for rank in DEALER_RANKS:
+        for rank in _DEALER_RANKS:
             result.append(StrategyContext(HandKind.HARD, total, rank))
 
     for total in range(13, 22):
-        for rank in DEALER_RANKS:
+        for rank in _DEALER_RANKS:
             result.append(StrategyContext(HandKind.SOFT, total, rank))
 
     for total in range(4, 23, 2):
-        for rank in DEALER_RANKS:
+        for rank in _DEALER_RANKS:
             result.append(StrategyContext(HandKind.PAIR, total, rank))
 
     return result
@@ -250,26 +113,15 @@ def expected_values(settings: PlaySettings) -> list[ExpectedValue]:
     """Generate first-pass expected value rows."""
     rows: list[ExpectedValue] = []
 
-    for context in contexts():
-        selected_action = best_action(settings, context)
-
+    for context in _contexts():
         for action in Action:
-            action_ev = 1.0 if action == selected_action else 0.0
-
-            if action == Action.STAND:
-                action_ev = ev.stand(
-                    context.player_total,
-                    Card(rank=context.dealer_rank, suit=Suit.SPADES),
-                    settings,
-                )
-
             rows.append(
                 ExpectedValue(
                     hand_kind=orm.to_orm(context.hand_kind),
                     player_total=context.player_total,
                     dealer_upcard=orm.to_orm(context.dealer_rank),
                     action=orm.to_orm(action),
-                    ev=action_ev,
+                    ev=_action_ev(settings, context, action),
                 )
             )
 

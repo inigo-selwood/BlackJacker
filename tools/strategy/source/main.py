@@ -26,7 +26,7 @@ def main() -> int:
     )
     print(
         "Created strategy database at "
-        f"{args.output}; exact expected value generation is not implemented yet."
+        f"{args.output}; generated exact EVs without resplit recursion."
     )
     return 0
 
