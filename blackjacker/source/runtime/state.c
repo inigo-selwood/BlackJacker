@@ -1,7 +1,14 @@
 #include "runtime/runtime.h"
 
 Runtime_State Runtime_initState(void) {
-    const Runtime_State state = {MODE_MENU, MODE_MENU, false, true, {0}};
+    const Runtime_State state = {
+        .mode = MODE_MENU,
+        .queuedMode = MODE_MENU,
+        .hasQueuedMode = false,
+        .running = true,
+        .guideSection = GUIDE_SECTION_HARD,
+        .modeFocus = {0},
+    };
     return state;
 }
 

@@ -16,8 +16,16 @@ typedef enum {
     MODE_MENU,
     MODE_SETTINGS,
     MODE_PLAY,
+    MODE_GUIDE,
     MODE_COUNT
 } Runtime_Mode;
+
+/** Strategy guide chart section. */
+typedef enum {
+    GUIDE_SECTION_HARD,
+    GUIDE_SECTION_SOFT,
+    GUIDE_SECTION_PAIRS,
+} Runtime_GuideSection;
 
 /** Mutable runtime state for mode, deferred transitions, and focus. */
 typedef struct {
@@ -25,6 +33,7 @@ typedef struct {
     Runtime_Mode queuedMode;
     bool hasQueuedMode;
     bool running;
+    Runtime_GuideSection guideSection;
     int modeFocus[MODE_COUNT];
 } Runtime_State;
 

@@ -5,7 +5,7 @@
 
 #include "runtime/runtime.h"
 
-enum { MIN_TERMINAL_WIDTH = 80, MIN_TERMINAL_HEIGHT = 24 };
+enum { MIN_TERMINAL_WIDTH = 80, MIN_TERMINAL_HEIGHT = 26 };
 
 /*******************************************************************************
  * Core Geometry
@@ -75,6 +75,29 @@ void Graphics_drawBox(Graphics_Box box);
 
 /** Draws a horizontal divider across a box's first row. */
 void Graphics_drawHorizontalDivider(Graphics_Box box);
+
+/*******************************************************************************
+ * Tables
+ ******************************************************************************/
+
+/** Fixed-size grid rendered with box-drawing characters. */
+typedef struct {
+    Graphics_Box box;
+    const char **columns;
+    int columnCount;
+    const char **rows;
+    int rowCount;
+    const char **cells;
+    int *cellAttrs;
+    int cellWidth;
+    int rowLabelWidth;
+} Graphics_Table;
+
+/** Returns the natural size for a table. */
+Graphics_Size Graphics_tableSize(Graphics_Table table);
+
+/** Draws a table using its configured box and cell text. */
+void Graphics_drawTable(Graphics_Table table);
 
 /*******************************************************************************
  * Labels

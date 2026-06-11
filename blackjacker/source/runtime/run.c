@@ -3,6 +3,7 @@
 #include <curses.h>
 
 #include "graphics/graphics.h"
+#include "modes/guide/mode.h"
 #include "modes/menu/mode.h"
 #include "modes/notice/mode.h"
 #include "modes/play/mode.h"
@@ -14,6 +15,7 @@ static void registerStates(void) {
     Runtime_registerState(mainMenuCallback, MODE_MENU);
     Runtime_registerState(settingsCallback, MODE_SETTINGS);
     Runtime_registerState(playCallback, MODE_PLAY);
+    Runtime_registerState(guideCallback, MODE_GUIDE);
 }
 
 static Runtime_Mode activeMode(Runtime_Game *game) {
