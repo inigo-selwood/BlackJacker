@@ -1,6 +1,5 @@
 #include "game.h"
 
-#include "modes/play/strategy.h"
 #include "table/table.h"
 
 static void clearHand(Table_Hand *hand) {
@@ -28,14 +27,6 @@ static PlayDecision userDecision(void) {
     };
 }
 
-static PlayDecision strategyDecision(void) {
-    return (PlayDecision){
-        .source = PLAY_DECISION_STRATEGY,
-        .allowSurrender = false,
-        .allowSplit = false,
-    };
-}
-
 static void resetPlayHand(PlayHand *hand, PlayDecision decision) {
     *hand = (PlayHand){
         .cards = {0},
@@ -44,89 +35,6 @@ static void resetPlayHand(PlayHand *hand, PlayDecision decision) {
         .doubledDown = false,
         .splitAces = false,
     };
-}
-
-static PlayAction strategyToPlayAction(StrategyAction action) {
-    switch(action) {
-    case STRATEGY_STAND:
-        return PLAY_ACTION_STAND;
-    case STRATEGY_DOUBLE:
-        return PLAY_ACTION_DOUBLE;
-    case STRATEGY_SPLIT:
-        return PLAY_ACTION_SPLIT;
-    case STRATEGY_SURRENDER:
-        return PLAY_ACTION_SURRENDER;
-    case STRATEGY_HIT:
-    default:
-        return PLAY_ACTION_HIT;
-    }
-}
-
-static PlayAction decidePlayHandAction(
-    Runtime_Game *game,
-    PlayHand hand,
-    int handCount,
-    PlayAction userAction
-) {
-    if(hand.decision.source == PLAY_DECISION_USER) {
-        return userAction;
-    }
-
-    if(hand.decision.source == PLAY_DECISION_STRATEGY) {
-        return strategyToPlayAction(
-            perfectStrategyHandAction(game, hand, handCount)
-        );
-    }
-
-    return PLAY_ACTION_NONE;
-}
-
-static void playOtherPlayerHand(Runtime_Game *game, int handIndex) {
-    PlayRound *round = &game->playRound;
-    PlayHand *playHand = &round->otherPlayerHands[handIndex];
-    Table_Hand *hand = &playHand->cards;
-
-    while(Table_handValue(*hand) <= 21) {
-        const PlayAction action = decidePlayHandAction(
-            game,
-            *playHand,
-            round->otherPlayerHandCount,
-            PLAY_ACTION_NONE
-        );
-
-        if(action != PLAY_ACTION_HIT && action != PLAY_ACTION_DOUBLE) {
-            return;
-        }
-
-        addCard(game, hand);
-
-        if(action == PLAY_ACTION_DOUBLE) {
-            playHand->doubledDown = true;
-            return;
-        }
-    }
-
-    playHand->result = ROUND_RESULT_PLAYER_BUST;
-}
-
-static void playOtherPlayersBeforePlayer(Runtime_Game *game) {
-    PlayRound *round = &game->playRound;
-
-    for(int index = 0;
-        index < round->otherPlayerHandCount && index < PLAYER_TABLE_SEAT_INDEX;
-        index += 1) {
-        playOtherPlayerHand(game, index);
-    }
-}
-
-static void playOtherPlayersAfterPlayer(Runtime_Game *game) {
-    PlayRound *round = &game->playRound;
-
-    for(int index = PLAYER_TABLE_SEAT_INDEX;
-        index < round->otherPlayerHandCount;
-        index += 1) {
-        playOtherPlayerHand(game, index);
-    }
 }
 
 static bool dealerShouldHit(Runtime_Game *game) {
@@ -178,42 +86,12 @@ static void resolveHand(Runtime_Game *game, int handIndex) {
     }
 }
 
-static RoundResult resolveVisibleHand(Table_Hand hand, Table_Hand dealerHand) {
-    const int playerValue = Table_handValue(hand);
-    const int dealerValue = Table_handValue(dealerHand);
-
-    if(playerValue > 21) {
-        return ROUND_RESULT_PLAYER_BUST;
-    }
-
-    if(dealerValue > 21) {
-        return ROUND_RESULT_DEALER_BUST;
-    }
-
-    if(playerValue > dealerValue) {
-        return ROUND_RESULT_PLAYER_WIN;
-    }
-
-    if(dealerValue > playerValue) {
-        return ROUND_RESULT_DEALER_WIN;
-    }
-
-    return ROUND_RESULT_PUSH;
-}
-
 static bool hasLiveDealerHand(Runtime_Game *game) {
     PlayRound *round = &game->playRound;
 
     for(int index = 0; index < round->playerHandCount; index += 1) {
         if(round->playerHands[index].result == ROUND_RESULT_NONE
             && Table_handValue(round->playerHands[index].cards) <= 21) {
-            return true;
-        }
-    }
-
-    for(int index = 0; index < round->otherPlayerHandCount; index += 1) {
-        if(round->otherPlayerHands[index].result == ROUND_RESULT_NONE
-            && Table_handValue(round->otherPlayerHands[index].cards) <= 21) {
             return true;
         }
     }
@@ -239,15 +117,6 @@ static void completeRound(Runtime_Game *game) {
         resolveHand(game, index);
     }
 
-    for(int index = 0; index < round->otherPlayerHandCount; index += 1) {
-        if(round->otherPlayerHands[index].result == ROUND_RESULT_NONE) {
-            round->otherPlayerHands[index].result = resolveVisibleHand(
-                round->otherPlayerHands[index].cards,
-                round->dealerHand
-            );
-        }
-    }
-
     round->phase = ROUND_COMPLETE;
 }
 
@@ -259,25 +128,7 @@ static void finishActiveHand(Runtime_Game *game) {
         return;
     }
 
-    playOtherPlayersAfterPlayer(game);
     completeRound(game);
-}
-
-static PlayAction
-decideActivePlayerAction(Runtime_Game *game, PlayAction userAction) {
-    PlayRound *round = &game->playRound;
-
-    if(round->activePlayerHand < 0
-        || round->activePlayerHand >= round->playerHandCount) {
-        return PLAY_ACTION_NONE;
-    }
-
-    return decidePlayHandAction(
-        game,
-        round->playerHands[round->activePlayerHand],
-        round->playerHandCount,
-        userAction
-    );
 }
 
 static bool activeHandHasPair(Runtime_Game *game) {
@@ -316,10 +167,8 @@ static bool splitLimitAllows(Runtime_Game *game) {
 void initPlayRound(Runtime_Game *game) {
     game->playRound = (PlayRound){
         .dealerHand = {0},
-        .otherPlayerHands = {{0}},
         .playerHands = {{0}},
         .roundNumber = 0,
-        .otherPlayerHandCount = MAX_OTHER_PLAYER_HANDS,
         .playerHandCount = 1,
         .activePlayerHand = 0,
         .phase = ROUND_PLAYER_TURN,
@@ -332,46 +181,27 @@ void startNextPlayRound(Runtime_Game *game) {
 
     clearHand(&round->dealerHand);
 
-    for(int index = 0; index < MAX_OTHER_PLAYER_HANDS; index += 1) {
-        resetPlayHand(&round->otherPlayerHands[index], strategyDecision());
-    }
-
     for(int index = 0; index < MAX_PLAYER_HANDS; index += 1) {
         resetPlayHand(&round->playerHands[index], userDecision());
     }
 
     round->roundNumber += 1;
-    round->otherPlayerHandCount = MAX_OTHER_PLAYER_HANDS;
     round->playerHandCount = 1;
     round->activePlayerHand = 0;
     round->phase = ROUND_PLAYER_TURN;
 
-    for(int index = 0; index < round->otherPlayerHandCount; index += 1) {
-        addCard(game, &round->otherPlayerHands[index].cards);
-    }
-
     addCard(game, &round->playerHands[0].cards);
     addCard(game, &round->dealerHand);
-
-    for(int index = 0; index < round->otherPlayerHandCount; index += 1) {
-        addCard(game, &round->otherPlayerHands[index].cards);
-    }
 
     addCard(game, &round->playerHands[0].cards);
 
     if(!game->playSettings.useNoHoleCardRule) {
         addCard(game, &round->dealerHand);
     }
-
-    playOtherPlayersBeforePlayer(game);
 }
 
 void playHit(Runtime_Game *game) {
     Table_Hand *hand = activePlayerHand(game);
-
-    if(decideActivePlayerAction(game, PLAY_ACTION_HIT) != PLAY_ACTION_HIT) {
-        return;
-    }
 
     if(!canHit(game)) {
         return;
@@ -387,11 +217,6 @@ void playHit(Runtime_Game *game) {
 }
 
 void playStand(Runtime_Game *game) {
-    if(decideActivePlayerAction(game, PLAY_ACTION_STAND)
-        != PLAY_ACTION_STAND) {
-        return;
-    }
-
     if(game->playRound.phase != ROUND_PLAYER_TURN) {
         return;
     }
@@ -401,11 +226,6 @@ void playStand(Runtime_Game *game) {
 
 void playDouble(Runtime_Game *game) {
     Table_Hand *hand = activePlayerHand(game);
-
-    if(decideActivePlayerAction(game, PLAY_ACTION_DOUBLE)
-        != PLAY_ACTION_DOUBLE) {
-        return;
-    }
 
     if(!canDouble(game) || !hand) {
         return;
@@ -430,11 +250,6 @@ void playSplit(Runtime_Game *game) {
     PlayHand *secondPlayHand;
     Table_Hand *secondHand;
     Table_Card movedCard;
-
-    if(decideActivePlayerAction(game, PLAY_ACTION_SPLIT)
-        != PLAY_ACTION_SPLIT) {
-        return;
-    }
 
     if(!canSplit(game) || !firstHand) {
         return;
@@ -473,11 +288,6 @@ void playSplit(Runtime_Game *game) {
 
 void playSurrender(Runtime_Game *game) {
     PlayRound *round = &game->playRound;
-
-    if(decideActivePlayerAction(game, PLAY_ACTION_SURRENDER)
-        != PLAY_ACTION_SURRENDER) {
-        return;
-    }
 
     if(!canSurrender(game)) {
         return;

@@ -31,7 +31,7 @@ static Graphics_ControlGroup
 menuControls(Runtime_Game *game, Graphics_Box box) {
     static Graphics_Control controls[] = {
         {
-            .label = "PLAY",
+            .label = "TRAIN",
             .labelWidth = 0,
             .labelAlignment = GRAPHICS_ALIGN_CENTER,
             .type = GRAPHICS_CONTROL_BUTTON,

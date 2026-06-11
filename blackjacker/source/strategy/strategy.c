@@ -87,31 +87,32 @@ static bool handCanSurrender(Runtime_Game *game, StrategyHandContext context) {
         && context.hand.count == 2 && context.handCount == 1;
 }
 
-static StrategyAction doubleOrFallback(
+static Strategy_Action doubleOrFallback(
     Runtime_Game *game,
     StrategyHandContext context,
-    StrategyAction fallback
+    Strategy_Action fallback
 ) {
-    return handCanDouble(game, context) ? STRATEGY_DOUBLE : fallback;
+    return handCanDouble(game, context) ? STRATEGY_ACTION_DOUBLE : fallback;
 }
 
-static StrategyAction splitOrFallback(
+static Strategy_Action splitOrFallback(
     Runtime_Game *game,
     StrategyHandContext context,
-    StrategyAction fallback
+    Strategy_Action fallback
 ) {
-    return handCanSplit(game, context) ? STRATEGY_SPLIT : fallback;
+    return handCanSplit(game, context) ? STRATEGY_ACTION_SPLIT : fallback;
 }
 
-static StrategyAction surrenderOrFallback(
+static Strategy_Action surrenderOrFallback(
     Runtime_Game *game,
     StrategyHandContext context,
-    StrategyAction fallback
+    Strategy_Action fallback
 ) {
-    return handCanSurrender(game, context) ? STRATEGY_SURRENDER : fallback;
+    return handCanSurrender(game, context) ? STRATEGY_ACTION_SURRENDER
+                                           : fallback;
 }
 
-static StrategyAction
+static Strategy_Action
 hardStrategy(Runtime_Game *game, StrategyHandContext context) {
     Table_Hand hand = context.hand;
     const int value = Table_handValue(hand);
@@ -120,57 +121,61 @@ hardStrategy(Runtime_Game *game, StrategyHandContext context) {
         game->playSettings.dealerSoft17Rule == DEALER_HITS_SOFT_17;
 
     if(value >= 17) {
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     }
 
     if(value == 16) {
         if(dealer >= 9) {
-            return surrenderOrFallback(game, context, STRATEGY_HIT);
+            return surrenderOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
 
-        return dealer >= 2 && dealer <= 6 ? STRATEGY_STAND : STRATEGY_HIT;
+        return dealer >= 2 && dealer <= 6 ? STRATEGY_ACTION_STAND
+                                          : STRATEGY_ACTION_HIT;
     }
 
     if(value == 15) {
         if(dealer == 10 || (dealer == 11 && dealerHitsSoft17)) {
-            return surrenderOrFallback(game, context, STRATEGY_HIT);
+            return surrenderOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
 
-        return dealer >= 2 && dealer <= 6 ? STRATEGY_STAND : STRATEGY_HIT;
+        return dealer >= 2 && dealer <= 6 ? STRATEGY_ACTION_STAND
+                                          : STRATEGY_ACTION_HIT;
     }
 
     if(value >= 13) {
-        return dealer >= 2 && dealer <= 6 ? STRATEGY_STAND : STRATEGY_HIT;
+        return dealer >= 2 && dealer <= 6 ? STRATEGY_ACTION_STAND
+                                          : STRATEGY_ACTION_HIT;
     }
 
     if(value == 12) {
-        return dealer >= 4 && dealer <= 6 ? STRATEGY_STAND : STRATEGY_HIT;
+        return dealer >= 4 && dealer <= 6 ? STRATEGY_ACTION_STAND
+                                          : STRATEGY_ACTION_HIT;
     }
 
     if(value == 11) {
         if(dealer == 11 && !dealerHitsSoft17) {
-            return STRATEGY_HIT;
+            return STRATEGY_ACTION_HIT;
         }
 
-        return doubleOrFallback(game, context, STRATEGY_HIT);
+        return doubleOrFallback(game, context, STRATEGY_ACTION_HIT);
     }
 
     if(value == 10) {
         return dealer >= 2 && dealer <= 9
-            ? doubleOrFallback(game, context, STRATEGY_HIT)
-            : STRATEGY_HIT;
+            ? doubleOrFallback(game, context, STRATEGY_ACTION_HIT)
+            : STRATEGY_ACTION_HIT;
     }
 
     if(value == 9) {
         return dealer >= 3 && dealer <= 6
-            ? doubleOrFallback(game, context, STRATEGY_HIT)
-            : STRATEGY_HIT;
+            ? doubleOrFallback(game, context, STRATEGY_ACTION_HIT)
+            : STRATEGY_ACTION_HIT;
     }
 
-    return STRATEGY_HIT;
+    return STRATEGY_ACTION_HIT;
 }
 
-static StrategyAction
+static Strategy_Action
 softStrategy(Runtime_Game *game, StrategyHandContext context) {
     Table_Hand hand = context.hand;
     const int value = Table_handValue(hand);
@@ -179,63 +184,64 @@ softStrategy(Runtime_Game *game, StrategyHandContext context) {
         game->playSettings.dealerSoft17Rule == DEALER_HITS_SOFT_17;
 
     if(value >= 20) {
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     }
 
     if(value == 19) {
         if(dealer == 6 && dealerHitsSoft17) {
-            return doubleOrFallback(game, context, STRATEGY_STAND);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_STAND);
         }
 
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     }
 
     if(value == 18) {
         if(dealer >= 3 && dealer <= 6) {
-            return doubleOrFallback(game, context, STRATEGY_STAND);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_STAND);
         }
 
         if(dealer == 2 && dealerHitsSoft17) {
-            return doubleOrFallback(game, context, STRATEGY_STAND);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_STAND);
         }
 
-        return dealer == 7 || dealer == 8 ? STRATEGY_STAND : STRATEGY_HIT;
+        return dealer == 7 || dealer == 8 ? STRATEGY_ACTION_STAND
+                                          : STRATEGY_ACTION_HIT;
     }
 
     if(value == 17) {
         if(dealer >= 3 && dealer <= 6) {
-            return doubleOrFallback(game, context, STRATEGY_HIT);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
 
         if(dealer == 2 && dealerHitsSoft17) {
-            return doubleOrFallback(game, context, STRATEGY_HIT);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
 
-        return STRATEGY_HIT;
+        return STRATEGY_ACTION_HIT;
     }
 
     if(value == 16 || value == 15) {
         if(dealer >= 4 && dealer <= 6) {
-            return doubleOrFallback(game, context, STRATEGY_HIT);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
 
-        return STRATEGY_HIT;
+        return STRATEGY_ACTION_HIT;
     }
 
     if(value == 14 || value == 13) {
         if(dealer >= 5 && dealer <= 6) {
-            return doubleOrFallback(game, context, STRATEGY_HIT);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
 
         if(dealer == 4 && dealerHitsSoft17) {
-            return doubleOrFallback(game, context, STRATEGY_HIT);
+            return doubleOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
     }
 
-    return STRATEGY_HIT;
+    return STRATEGY_ACTION_HIT;
 }
 
-static StrategyAction
+static Strategy_Action
 pairStrategy(Runtime_Game *game, StrategyHandContext context) {
     Table_Hand hand = context.hand;
     const Table_Rank rank = hand.cards[0].rank;
@@ -250,62 +256,62 @@ pairStrategy(Runtime_Game *game, StrategyHandContext context) {
     case TABLE_RANK_JACK:
     case TABLE_RANK_QUEEN:
     case TABLE_RANK_KING:
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     case TABLE_RANK_NINE:
         if((dealer >= 2 && dealer <= 6) || dealer == 8 || dealer == 9) {
-            return splitOrFallback(game, context, STRATEGY_STAND);
+            return splitOrFallback(game, context, STRATEGY_ACTION_STAND);
         }
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     case TABLE_RANK_SEVEN:
         if(dealer >= 2 && dealer <= 7) {
-            return splitOrFallback(game, context, STRATEGY_HIT);
+            return splitOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
-        return STRATEGY_HIT;
+        return STRATEGY_ACTION_HIT;
     case TABLE_RANK_SIX:
         if((dealer >= 3 && dealer <= 6) || (dealer == 2 && doubleAfterSplit)) {
-            return splitOrFallback(game, context, STRATEGY_HIT);
+            return splitOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
-        return STRATEGY_HIT;
+        return STRATEGY_ACTION_HIT;
     case TABLE_RANK_FIVE:
         return hardStrategy(game, context);
     case TABLE_RANK_FOUR:
         if(doubleAfterSplit && dealer >= 5 && dealer <= 6) {
-            return splitOrFallback(game, context, STRATEGY_HIT);
+            return splitOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
-        return STRATEGY_HIT;
+        return STRATEGY_ACTION_HIT;
     case TABLE_RANK_THREE:
     case TABLE_RANK_TWO:
         if((dealer >= 4 && dealer <= 7)
             || (doubleAfterSplit && dealer >= 2 && dealer <= 3)) {
-            return splitOrFallback(game, context, STRATEGY_HIT);
+            return splitOrFallback(game, context, STRATEGY_ACTION_HIT);
         }
-        return STRATEGY_HIT;
+        return STRATEGY_ACTION_HIT;
     default:
         return hardStrategy(game, context);
     }
 }
 
-const char *strategyActionLabel(StrategyAction action) {
+const char *strategyActionLabel(Strategy_Action action) {
     switch(action) {
-    case STRATEGY_STAND:
+    case STRATEGY_ACTION_STAND:
         return "Stand";
-    case STRATEGY_DOUBLE:
+    case STRATEGY_ACTION_DOUBLE:
         return "Double";
-    case STRATEGY_SPLIT:
+    case STRATEGY_ACTION_SPLIT:
         return "Split";
-    case STRATEGY_SURRENDER:
+    case STRATEGY_ACTION_SURRENDER:
         return "Surrender";
-    case STRATEGY_HIT:
+    case STRATEGY_ACTION_HIT:
     default:
         return "Hit";
     }
 }
 
-static StrategyAction
+static Strategy_Action
 strategyForContext(Runtime_Game *game, StrategyHandContext context) {
     if(!game || context.hand.count <= 0
         || game->playRound.phase != ROUND_PLAYER_TURN) {
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     }
 
     if(handIsPair(context.hand)) {
@@ -319,12 +325,12 @@ strategyForContext(Runtime_Game *game, StrategyHandContext context) {
     return hardStrategy(game, context);
 }
 
-StrategyAction perfectStrategyAction(Runtime_Game *game, int handIndex) {
+Strategy_Action perfectStrategyAction(Runtime_Game *game, int handIndex) {
     StrategyHandContext context;
 
     if(!game || handIndex < 0
         || handIndex >= game->playRound.playerHandCount) {
-        return STRATEGY_STAND;
+        return STRATEGY_ACTION_STAND;
     }
 
     context = (StrategyHandContext){
@@ -341,7 +347,7 @@ StrategyAction perfectStrategyAction(Runtime_Game *game, int handIndex) {
     return strategyForContext(game, context);
 }
 
-StrategyAction
+Strategy_Action
 perfectStrategyHandAction(Runtime_Game *game, PlayHand hand, int handCount) {
     const StrategyHandContext context = {
         .hand = hand.cards,
@@ -355,7 +361,7 @@ perfectStrategyHandAction(Runtime_Game *game, PlayHand hand, int handCount) {
     return strategyForContext(game, context);
 }
 
-StrategyAction perfectStrategyCardsAction(
+Strategy_Action perfectStrategyCardsAction(
     Runtime_Game *game,
     Table_Hand cards,
     bool fromSplit,

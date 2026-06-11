@@ -7,8 +7,6 @@
 
 enum {
     MAX_PLAYER_HANDS = 4,
-    MAX_OTHER_PLAYER_HANDS = 2,
-    PLAYER_TABLE_SEAT_INDEX = 1,
 };
 
 /** Dealer behavior for soft 17. */
@@ -94,10 +92,8 @@ typedef struct {
 /** Mutable state for the blackjack play table. */
 typedef struct {
     Table_Hand dealerHand;
-    PlayHand otherPlayerHands[MAX_OTHER_PLAYER_HANDS];
     PlayHand playerHands[MAX_PLAYER_HANDS];
     int roundNumber;
-    int otherPlayerHandCount;
     int playerHandCount;
     int activePlayerHand;
     RoundPhase phase;
