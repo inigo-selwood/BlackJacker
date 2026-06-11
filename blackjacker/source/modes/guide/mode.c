@@ -13,17 +13,26 @@ enum {
     HARD_ROW_COUNT = 17,
     SOFT_ROW_COUNT = 9,
     PAIR_ROW_COUNT = 10,
-    GUIDE_CELL_WIDTH = 3,
+    GUIDE_CELL_WIDTH = 5,
     GUIDE_ROW_LABEL_WIDTH = 10,
-    GUIDE_BUTTON_WIDTH = 12,
-    GUIDE_BUTTON_GAP = 2,
-    GUIDE_KEY_WIDTH = 56,
+    GUIDE_CONTROL_COUNT = 5,
+    GUIDE_SECTION_CONTROL_COUNT = 3,
+    GUIDE_NAV_CONTROL_COUNT = 2,
+    GUIDE_BUTTON_WIDTH = 14,
+    GUIDE_BUTTON_GAP = 1,
+    GUIDE_KEY_WIDTH = 72,
+    GUIDE_KEY_HEIGHT = 3,
 };
 
 typedef struct {
     const char *code;
     const char *label;
 } GuideKeyItem;
+
+typedef struct {
+    GuideKeyItem items[5];
+    int itemCount;
+} GuideKeyRow;
 
 static const char *dealerColumns[DEALER_COLUMN_COUNT] = {
     "2",
@@ -94,15 +103,19 @@ static void backToTrain(Runtime_Game *game) {
     Runtime_queueState(&game->state, MODE_PLAY);
 }
 
+static void openSettings(Runtime_Game *game) {
+    Runtime_queueState(&game->state, MODE_SETTINGS);
+}
+
 static void
-arrangeGuideControls(Graphics_Control *controls, Graphics_Box box) {
-    const int count = 4;
+arrangeSectionControls(Graphics_Control *controls, Graphics_Box box) {
+    const int count = GUIDE_SECTION_CONTROL_COUNT;
     const int totalWidth =
         count * GUIDE_BUTTON_WIDTH + (count - 1) * GUIDE_BUTTON_GAP;
     const Graphics_Box row = Graphics_positionWithin(
         box,
         (Graphics_Size){totalWidth, 1},
-        GRAPHICS_ALIGN_CENTER,
+        GRAPHICS_ALIGN_START,
         GRAPHICS_ALIGN_CENTER
     );
 
@@ -115,14 +128,32 @@ arrangeGuideControls(Graphics_Control *controls, Graphics_Box box) {
     );
 }
 
-static Graphics_ControlGroup
-guideControls(Runtime_Game *game, Graphics_Box box) {
-    static Graphics_Control controls[4];
+static void arrangeNavControls(Graphics_Control *controls, Graphics_Box box) {
+    Graphics_positionControlWithin(
+        &controls[0],
+        box,
+        GRAPHICS_ALIGN_START,
+        GRAPHICS_ALIGN_STRETCH
+    );
+    Graphics_positionControlWithin(
+        &controls[1],
+        box,
+        GRAPHICS_ALIGN_END,
+        GRAPHICS_ALIGN_STRETCH
+    );
+}
+
+static Graphics_ControlGroup guideControls(
+    Runtime_Game *game,
+    Graphics_Box sectionBox,
+    Graphics_Box ruleBox
+) {
+    static Graphics_Control controls[GUIDE_CONTROL_COUNT];
 
     controls[0] = (Graphics_Control){
         .label = "HARD",
         .labelWidth = 0,
-        .labelAlignment = GRAPHICS_ALIGN_CENTER,
+        .labelAlignment = GRAPHICS_ALIGN_START,
         .width = GUIDE_BUTTON_WIDTH,
         .shortcut = 'h',
         .type = GRAPHICS_CONTROL_BUTTON,
@@ -131,7 +162,7 @@ guideControls(Runtime_Game *game, Graphics_Box box) {
     controls[1] = (Graphics_Control){
         .label = "SOFT",
         .labelWidth = 0,
-        .labelAlignment = GRAPHICS_ALIGN_CENTER,
+        .labelAlignment = GRAPHICS_ALIGN_START,
         .width = GUIDE_BUTTON_WIDTH,
         .shortcut = 's',
         .type = GRAPHICS_CONTROL_BUTTON,
@@ -140,31 +171,93 @@ guideControls(Runtime_Game *game, Graphics_Box box) {
     controls[2] = (Graphics_Control){
         .label = "PAIRS",
         .labelWidth = 0,
-        .labelAlignment = GRAPHICS_ALIGN_CENTER,
+        .labelAlignment = GRAPHICS_ALIGN_START,
         .width = GUIDE_BUTTON_WIDTH,
         .shortcut = 'p',
         .type = GRAPHICS_CONTROL_BUTTON,
         .data.button = {setPairs},
     };
     controls[3] = (Graphics_Control){
+        .label = "SETTINGS",
+        .labelWidth = 0,
+        .labelAlignment = GRAPHICS_ALIGN_START,
+        .width = GUIDE_BUTTON_WIDTH,
+        .shortcut = 'o',
+        .type = GRAPHICS_CONTROL_BUTTON,
+        .data.button = {openSettings},
+    };
+    controls[4] = (Graphics_Control){
         .label = "BACK",
         .labelWidth = 0,
-        .labelAlignment = GRAPHICS_ALIGN_CENTER,
+        .labelAlignment = GRAPHICS_ALIGN_START,
         .width = GUIDE_BUTTON_WIDTH,
         .shortcut = 'b',
         .type = GRAPHICS_CONTROL_BUTTON,
         .data.button = {backToTrain},
     };
 
-    arrangeGuideControls(controls, box);
+    arrangeSectionControls(controls, sectionBox);
+    arrangeNavControls(&controls[GUIDE_SECTION_CONTROL_COUNT], ruleBox);
+
+    for(int index = 0; index < GUIDE_CONTROL_COUNT; index += 1) {
+        controls[index].tabIndex = index;
+    }
 
     const Graphics_ControlGroup group = {
         controls,
-        4,
+        GUIDE_CONTROL_COUNT,
         &game->state.modeFocus[MODE_GUIDE],
     };
 
     return group;
+}
+
+static void arrangeGuideSections(Graphics_Box screen, Graphics_Box *sections) {
+    (void)screen;
+
+    const Graphics_Box content = Graphics_minimumContentBox();
+    const Graphics_Table maxTable = {
+        .columns = dealerColumns,
+        .columnCount = DEALER_COLUMN_COUNT,
+        .rowCount = HARD_ROW_COUNT,
+        .cellWidth = GUIDE_CELL_WIDTH,
+        .rowLabelWidth = GUIDE_ROW_LABEL_WIDTH,
+    };
+    const Graphics_Size maxTableSize = Graphics_tableSize(maxTable);
+    const Graphics_Box chartPanel = Graphics_positionWithin(
+        content,
+        (Graphics_Size){GUIDE_KEY_WIDTH, maxTableSize.height + 4},
+        GRAPHICS_ALIGN_CENTER,
+        GRAPHICS_ALIGN_CENTER
+    );
+    const Graphics_Box controlsPanel = Graphics_positionWithin(
+        content,
+        (Graphics_Size){content.width, 3},
+        GRAPHICS_ALIGN_START,
+        GRAPHICS_ALIGN_END
+    );
+
+    sections[0] = (Graphics_Box){0, 0, 0, 1};
+    sections[1] = (Graphics_Box){0, 0, 0, GUIDE_KEY_HEIGHT};
+    sections[2] = (Graphics_Box){0, 0, 0, maxTableSize.height};
+    sections[3] = (Graphics_Box){0, 0, 0, 1};
+    sections[4] = (Graphics_Box){0, 0, 0, 1};
+    sections[5] = (Graphics_Box){0, 0, 0, 1};
+
+    Graphics_arrangeWithin(
+        chartPanel,
+        GRAPHICS_DIRECTION_COLUMN,
+        0,
+        sections,
+        3
+    );
+    Graphics_arrangeWithin(
+        controlsPanel,
+        GRAPHICS_DIRECTION_COLUMN,
+        0,
+        &sections[3],
+        3
+    );
 }
 
 static int guideRowCount(Runtime_GuideSection section) {
@@ -301,18 +394,18 @@ static int buildGuideTable(
         sourceRows[displayRow] = sourceRow;
 
         for(int column = 0; column < DEALER_COLUMN_COUNT; column += 1) {
-            Strategy_Action action;
+            const char *code;
             const int total = playerTotalForRow(section, sourceRow);
 
             const int cellIndex = displayRow * DEALER_COLUMN_COUNT + column;
 
-            if(Strategy_bestAction(
+            if(Strategy_bestActionCode(
                    handKind,
                    total,
                    dealerRanks[column],
-                   &action
+                   &code
                )) {
-                sourceCells[cellIndex] = Strategy_actionCode(action);
+                sourceCells[cellIndex] = code;
                 sourceAttrs[cellIndex] =
                     (int)Terminal_actionAttrs(sourceCells[cellIndex]);
             } else {
@@ -360,37 +453,41 @@ static int buildGuideTable(
 }
 
 static void drawGuideKey(Graphics_Box box) {
-    static const GuideKeyItem items[] = {
-        {"H", "Hit"},
-        {"S", "Stand"},
-        {"D", "Double"},
-        {"P", "Split"},
-        {"R", "Surrender"},
+    static const GuideKeyRow rows[] = {
+        {{{"H", "Hit"},
+             {"S", "Stand"},
+             {"D", "Double"},
+             {"P", "Split"},
+             {"R", "Surrender"}},
+            5},
     };
-    const int count = (int)(sizeof(items) / sizeof(items[0]));
-    int x = box.x + (box.width - GUIDE_KEY_WIDTH) / 2;
+    const int rowCount = (int)(sizeof(rows) / sizeof(rows[0]));
+    const int itemX[] = {
+        box.x + (box.width - 68) / 2,
+        box.x + (box.width - 68) / 2 + 12,
+        box.x + (box.width - 68) / 2 + 26,
+        box.x + (box.width - 68) / 2 + 41,
+        box.x + (box.width - 68) / 2 + 54,
+    };
 
-    for(int index = 0; index < count; index += 1) {
-        const attr_t attrs = Terminal_actionAttrs(items[index].code);
+    for(int row = 0; row < rowCount; row += 1) {
+        const int y = box.y + row + 1;
 
-        attron(attrs);
-        mvaddstr(box.y, x, " ");
-        x += 1;
-        mvaddstr(box.y, x, items[index].code);
-        x += (int)strlen(items[index].code);
-        mvaddstr(box.y, x, " ");
-        attroff(attrs);
-        x += 1;
+        for(int item = 0; item < rows[row].itemCount; item += 1) {
+            int x = itemX[item];
+            const GuideKeyItem key = rows[row].items[item];
+            const attr_t attrs = Terminal_actionAttrs(key.code);
 
-        mvaddstr(box.y, x, " ");
-        x += 1;
-
-        mvaddstr(box.y, x, items[index].label);
-        x += (int)strlen(items[index].label);
-
-        if(index + 1 < count) {
-            mvaddstr(box.y, x, "  ");
+            attron(attrs);
+            mvaddstr(y, x, " ");
+            x += 1;
+            mvaddstr(y, x, key.code);
+            x += (int)strlen(key.code);
+            mvaddstr(y, x, " ");
+            attroff(attrs);
             x += 2;
+
+            mvaddstr(y, x, key.label);
         }
     }
 }
@@ -401,30 +498,7 @@ static void drawGuide(Runtime_Game *game) {
     static int cellAttrs[HARD_ROW_COUNT * DEALER_COLUMN_COUNT];
     const Runtime_GuideSection section = game->state.guideSection;
     const Graphics_Box screen = Graphics_screenBox();
-    const Graphics_Table maxTable = {
-        .columns = dealerColumns,
-        .columnCount = DEALER_COLUMN_COUNT,
-        .rows = rows,
-        .rowCount = HARD_ROW_COUNT,
-        .cells = cells,
-        .cellAttrs = cellAttrs,
-        .cellWidth = GUIDE_CELL_WIDTH,
-        .rowLabelWidth = GUIDE_ROW_LABEL_WIDTH,
-    };
-    const Graphics_Size maxTableSize = Graphics_tableSize(maxTable);
-    const Graphics_Box panel = Graphics_positionWithin(
-        screen,
-        (Graphics_Size){GUIDE_KEY_WIDTH, maxTableSize.height + 4},
-        GRAPHICS_ALIGN_CENTER,
-        GRAPHICS_ALIGN_CENTER
-    );
-    Graphics_Box sections[5] = {
-        {0, 0, 0, 1},
-        {0, 0, 0, 1},
-        {0, 0, 0, maxTableSize.height},
-        {0, 0, 0, 1},
-        {0, 0, 0, 1},
-    };
+    Graphics_Box sections[6];
     Graphics_Label title = Graphics_label(
         sectionTitle(section),
         GRAPHICS_ALIGN_CENTER,
@@ -433,8 +507,8 @@ static void drawGuide(Runtime_Game *game) {
     );
     Graphics_ControlGroup controls;
 
-    Graphics_arrangeWithin(panel, GRAPHICS_DIRECTION_COLUMN, 0, sections, 5);
-    controls = guideControls(game, sections[4]);
+    arrangeGuideSections(screen, sections);
+    controls = guideControls(game, sections[3], sections[5]);
 
     Graphics_positionLabelWithin(
         &title,
@@ -477,6 +551,7 @@ static void drawGuide(Runtime_Game *game) {
     Graphics_Table positionedTable = table;
 
     drawGuideKey(sections[1]);
+    Graphics_drawHorizontalDivider(sections[4]);
     positionedTable.box = Graphics_positionWithin(
         sections[2],
         tableSize,
@@ -489,13 +564,11 @@ static void drawGuide(Runtime_Game *game) {
 
 void guideCallback(Runtime_Game *game, Runtime_ModeEvent event) {
     const Graphics_Box screen = Graphics_screenBox();
-    const Graphics_Box controlsBox = Graphics_positionWithin(
-        screen,
-        (Graphics_Size){60, 1},
-        GRAPHICS_ALIGN_CENTER,
-        GRAPHICS_ALIGN_END
-    );
-    Graphics_ControlGroup controls = guideControls(game, controlsBox);
+    Graphics_Box sections[6];
+
+    arrangeGuideSections(screen, sections);
+    Graphics_ControlGroup controls =
+        guideControls(game, sections[3], sections[5]);
 
     if(event.type == MODE_EVENT_INPUT) {
         Graphics_handleControlInput(&controls, event.input, game);

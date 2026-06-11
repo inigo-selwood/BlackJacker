@@ -53,18 +53,6 @@ static const char *boolText(bool value) {
     return value ? "true" : "false";
 }
 
-static const char *doubleRuleText(DoubleRule rule) {
-    switch(rule) {
-    case DOUBLE_9_10_11:
-        return "9-10-11";
-    case DOUBLE_10_11:
-        return "10-11";
-    case DOUBLE_ANY_TWO:
-    default:
-        return "any-two";
-    }
-}
-
 static bool parseDoubleRule(const char *text, DoubleRule *rule) {
     if(stringsEqual(text, "any-two") || stringsEqual(text, "any_two")) {
         *rule = DOUBLE_ANY_TWO;
@@ -106,16 +94,6 @@ static bool parseDealerSoft17Rule(const char *text, DealerSoft17Rule *rule) {
     }
 
     return false;
-}
-
-static const char *blackjackPayoutText(BlackjackPayout payout) {
-    switch(payout) {
-    case BLACKJACK_PAYS_6_TO_5:
-        return "6-to-5";
-    case BLACKJACK_PAYS_3_TO_2:
-    default:
-        return "3-to-2";
-    }
 }
 
 static bool parseBlackjackPayout(const char *text, BlackjackPayout *payout) {
@@ -309,26 +287,8 @@ bool Runtime_saveSettings(const PlaySettings *settings) {
     fprintf(file, "  deck-count: %d\n", settings->deckCount);
     fprintf(
         file,
-        "  allow-double-down: %s\n",
-        boolText(settings->allowDoubleDown)
-    );
-    fprintf(
-        file,
         "  allow-double-after-split: %s\n",
         boolText(settings->allowDoubleAfterSplit)
-    );
-    fprintf(file, "  double-rule: %s\n", doubleRuleText(settings->doubleRule));
-    fprintf(file, "  allow-split: %s\n", boolText(settings->allowSplit));
-    fprintf(file, "  allow-resplit: %s\n", boolText(settings->allowResplit));
-    fprintf(
-        file,
-        "  allow-hit-split-aces: %s\n",
-        boolText(settings->allowHitSplitAces)
-    );
-    fprintf(
-        file,
-        "  allow-resplit-aces: %s\n",
-        boolText(settings->allowResplitAces)
     );
     fprintf(
         file,
@@ -337,25 +297,8 @@ bool Runtime_saveSettings(const PlaySettings *settings) {
     );
     fprintf(
         file,
-        "  use-no-hole-card-rule: %s\n",
-        boolText(settings->useNoHoleCardRule)
-    );
-    fprintf(
-        file,
         "  dealer-soft-17-rule: %s\n",
         dealerSoft17RuleText(settings->dealerSoft17Rule)
-    );
-    fprintf(
-        file,
-        "  blackjack-payout: %s\n",
-        blackjackPayoutText(settings->blackjackPayout)
-    );
-    fprintf(file, "settings:\n");
-    fprintf(file, "  cut-percent: %d\n", settings->cutPercent);
-    fprintf(
-        file,
-        "  show-true-count: %s\n",
-        boolText(settings->showTrueCount)
     );
 
     fclose(file);

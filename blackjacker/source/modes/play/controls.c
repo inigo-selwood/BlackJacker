@@ -2,7 +2,11 @@
 
 #include "modes/play/game.h"
 
-enum { CONTROL_GAP = 2, CONTROL_WIDTH = 14 };
+enum { CONTROL_GAP = 1, CONTROL_WIDTH = 14 };
+
+static void noop(Runtime_Game *game) {
+    (void)game;
+}
 
 static void openSettings(Runtime_Game *game) {
     Runtime_queueState(&game->state, MODE_SETTINGS);
@@ -26,7 +30,7 @@ static void addAction(
     controls[*count] = (Graphics_Control){
         .label = label,
         .labelWidth = 0,
-        .labelAlignment = GRAPHICS_ALIGN_CENTER,
+        .labelAlignment = GRAPHICS_ALIGN_START,
         .width = CONTROL_WIDTH,
         .shortcut = shortcut,
         .type = GRAPHICS_CONTROL_BUTTON,
@@ -41,7 +45,7 @@ layoutControlRow(Graphics_Control *controls, int count, Graphics_Box box) {
     const Graphics_Box row = Graphics_positionWithin(
         box,
         (Graphics_Size){totalWidth, 1},
-        GRAPHICS_ALIGN_CENTER,
+        GRAPHICS_ALIGN_START,
         GRAPHICS_ALIGN_CENTER
     );
 
@@ -54,46 +58,50 @@ layoutControlRow(Graphics_Control *controls, int count, Graphics_Box box) {
     );
 }
 
+static void
+layoutOptionsRow(Graphics_Control *controls, int count, Graphics_Box box) {
+    if(count <= 0) {
+        return;
+    }
+
+    if(count > 1) {
+        layoutControlRow(controls, count - 1, box);
+    }
+
+    Graphics_positionControlWithin(
+        &controls[count - 1],
+        box,
+        GRAPHICS_ALIGN_END,
+        GRAPHICS_ALIGN_STRETCH
+    );
+}
+
 Graphics_ControlGroup playControls(Runtime_Game *game, Graphics_Box box) {
     static Graphics_Control controls[8];
-    Graphics_Box rows[2] = {
+    Graphics_Box sections[4] = {
+        {0, 0, 0, 1},
+        {0, 0, 0, 1},
         {0, 0, 0, 1},
         {0, 0, 0, 1},
     };
     int count = 0;
     int actionCount;
-    PlayRound *round = &game->playRound;
 
-    if(round->phase == ROUND_COMPLETE) {
-        addAction(controls, &count, "NEXT", 'n', startNextPlayRound);
-    } else if(round->phase == ROUND_PLAYER_TURN) {
-        if(canHit(game)) {
-            addAction(controls, &count, "HIT", 'h', playHit);
-        }
+    (void)game;
 
-        addAction(controls, &count, "STAND", 's', playStand);
-
-        if(canDouble(game)) {
-            addAction(controls, &count, "DOUBLE", 'd', playDouble);
-        }
-
-        if(canSplit(game)) {
-            addAction(controls, &count, "SPLIT", 'p', playSplit);
-        }
-
-        if(canSurrender(game)) {
-            addAction(controls, &count, "SURRENDER", 'r', playSurrender);
-        }
-    }
-
+    addAction(controls, &count, "HIT", 'h', noop);
+    addAction(controls, &count, "STAND", 's', noop);
+    addAction(controls, &count, "SPLIT", 'p', noop);
+    addAction(controls, &count, "DOUBLE", 'd', noop);
+    addAction(controls, &count, "SURRENDER", 'r', noop);
     actionCount = count;
     addAction(controls, &count, "SETTINGS", 'o', openSettings);
     addAction(controls, &count, "GUIDE", 'g', openGuide);
-    addAction(controls, &count, "QUIT", 'q', quitPlay);
+    addAction(controls, &count, "BACK", 'b', quitPlay);
 
-    Graphics_arrangeWithin(box, GRAPHICS_DIRECTION_COLUMN, 1, rows, 2);
-    layoutControlRow(controls, actionCount, rows[0]);
-    layoutControlRow(&controls[actionCount], count - actionCount, rows[1]);
+    Graphics_arrangeWithin(box, GRAPHICS_DIRECTION_COLUMN, 0, sections, 4);
+    layoutControlRow(controls, actionCount, sections[1]);
+    layoutOptionsRow(&controls[actionCount], count - actionCount, sections[3]);
 
     for(int index = 0; index < count; index += 1) {
         controls[index].tabIndex = index;

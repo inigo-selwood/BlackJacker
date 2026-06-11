@@ -4,8 +4,8 @@
 #include "runtime/runtime.h"
 
 enum {
-    MENU_OPTION_COUNT = 3,
-    MENU_OPTION_GAP = 2,
+    MENU_OPTION_COUNT = 2,
+    MENU_OPTION_GAP = 1,
     MENU_OPTION_WIDTH = 14,
 };
 
@@ -21,10 +21,6 @@ static void startPlay(Runtime_Game *game) {
     Runtime_queueState(&game->state, MODE_PLAY);
 }
 
-static void openSettings(Runtime_Game *game) {
-    Runtime_queueState(&game->state, MODE_SETTINGS);
-}
-
 static void quitGame(Runtime_Game *game) {
     game->state.running = false;
 }
@@ -35,25 +31,16 @@ menuControls(Runtime_Game *game, Graphics_Box box) {
         {
             .label = "TRAIN",
             .labelWidth = 0,
-            .labelAlignment = GRAPHICS_ALIGN_CENTER,
+            .labelAlignment = GRAPHICS_ALIGN_START,
             .width = MENU_OPTION_WIDTH,
             .shortcut = 't',
             .type = GRAPHICS_CONTROL_BUTTON,
             .data.button = {startPlay},
         },
         {
-            .label = "SETTINGS",
-            .labelWidth = 0,
-            .labelAlignment = GRAPHICS_ALIGN_CENTER,
-            .width = MENU_OPTION_WIDTH,
-            .shortcut = 's',
-            .type = GRAPHICS_CONTROL_BUTTON,
-            .data.button = {openSettings},
-        },
-        {
             .label = "QUIT",
             .labelWidth = 0,
-            .labelAlignment = GRAPHICS_ALIGN_CENTER,
+            .labelAlignment = GRAPHICS_ALIGN_START,
             .width = MENU_OPTION_WIDTH,
             .shortcut = 'q',
             .type = GRAPHICS_CONTROL_BUTTON,
@@ -61,23 +48,17 @@ menuControls(Runtime_Game *game, Graphics_Box box) {
         },
     };
 
-    const Graphics_Box row = Graphics_positionWithin(
+    Graphics_positionControlWithin(
+        &controls[0],
         box,
-        (Graphics_Size){
-            MENU_OPTION_COUNT * MENU_OPTION_WIDTH
-                + (MENU_OPTION_COUNT - 1) * MENU_OPTION_GAP,
-            1,
-        },
-        GRAPHICS_ALIGN_CENTER,
-        GRAPHICS_ALIGN_CENTER
+        GRAPHICS_ALIGN_START,
+        GRAPHICS_ALIGN_STRETCH
     );
-
-    Graphics_arrangeControlsWithin(
-        row,
-        GRAPHICS_DIRECTION_ROW,
-        MENU_OPTION_GAP,
-        controls,
-        MENU_OPTION_COUNT
+    Graphics_positionControlWithin(
+        &controls[1],
+        box,
+        GRAPHICS_ALIGN_END,
+        GRAPHICS_ALIGN_STRETCH
     );
 
     const Graphics_ControlGroup group = {
@@ -90,34 +71,34 @@ menuControls(Runtime_Game *game, Graphics_Box box) {
 }
 
 void mainMenuCallback(Runtime_Game *game, Runtime_ModeEvent event) {
-    const Graphics_Box screen = Graphics_screenBox();
+    const Graphics_Box content = Graphics_minimumContentBox();
     const Graphics_Size bannerSize = Graphics_blockTextSize(&bannerText);
     const int bannerHeight = bannerSize.height > 0 ? bannerSize.height : 1;
     int panelWidth = bannerSize.width > 0 ? bannerSize.width : 32;
 
-    if(panelWidth > screen.width) {
-        panelWidth = screen.width;
+    if(panelWidth > content.width) {
+        panelWidth = content.width;
     }
 
-    const Graphics_Box panel = Graphics_positionWithin(
-        screen,
-        (Graphics_Size){panelWidth, bannerHeight + 5},
+    const Graphics_Box bannerBox = Graphics_positionWithin(
+        content,
+        (Graphics_Size){panelWidth, bannerHeight},
         GRAPHICS_ALIGN_CENTER,
         GRAPHICS_ALIGN_CENTER
     );
-    Graphics_Box sections[3] = {
-        {0, 0, 0, bannerHeight},
-        {0, 0, 0, 2},
-        {0, 0, 0, 1},
-    };
-    Graphics_arrangeWithin(panel, GRAPHICS_DIRECTION_COLUMN, 0, sections, 3);
+    const Graphics_Box controlsBox = Graphics_positionWithin(
+        content,
+        (Graphics_Size){content.width, 1},
+        GRAPHICS_ALIGN_CENTER,
+        GRAPHICS_ALIGN_END
+    );
     Graphics_positionBlockTextWithin(
         &bannerText,
-        sections[0],
+        bannerBox,
         GRAPHICS_ALIGN_CENTER,
         GRAPHICS_ALIGN_START
     );
-    Graphics_ControlGroup controls = menuControls(game, sections[2]);
+    Graphics_ControlGroup controls = menuControls(game, controlsBox);
 
     if(event.type == MODE_EVENT_RENDER) {
         Graphics_drawBlockText(&bannerText);

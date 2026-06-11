@@ -5,28 +5,14 @@
 #include "modes/play/render.h"
 
 static Graphics_Box controlsBox(void) {
-    const Graphics_Box screen = Graphics_screenBox();
-    const Graphics_Box panel = Graphics_positionWithin(
-        screen,
-        (Graphics_Size){76, 22},
+    const Graphics_Box content = Graphics_minimumContentBox();
+
+    return Graphics_positionWithin(
+        content,
+        (Graphics_Size){content.width, 4},
         GRAPHICS_ALIGN_CENTER,
-        GRAPHICS_ALIGN_CENTER
+        GRAPHICS_ALIGN_END
     );
-    Graphics_Box sections[9] = {
-        {0, 0, 0, 1},
-        {0, 0, 0, 1},
-        {0, 0, 0, 1},
-        {0, 0, 0, 1},
-        {0, 0, 0, 7},
-        {0, 0, 0, 1},
-        {0, 0, 0, 7},
-        {0, 0, 0, 1},
-        {0, 0, 0, 3},
-    };
-
-    Graphics_arrangeWithin(panel, GRAPHICS_DIRECTION_COLUMN, 0, sections, 9);
-
-    return sections[8];
 }
 
 void playCallback(Runtime_Game *game, Runtime_ModeEvent event) {
@@ -38,4 +24,11 @@ void playCallback(Runtime_Game *game, Runtime_ModeEvent event) {
     }
 
     drawPlay(game);
+    Graphics_drawHorizontalDivider((Graphics_Box){
+        controlsBox().x,
+        controlsBox().y + 2,
+        controlsBox().width,
+        1,
+    });
+    Graphics_drawControls(controls);
 }
