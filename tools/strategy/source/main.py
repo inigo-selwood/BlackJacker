@@ -24,10 +24,7 @@ def main() -> int:
         args.output,
         strategy.expected_values(play_settings),
     )
-    print(
-        "Created strategy database at "
-        f"{args.output}; generated exact EVs without resplit recursion."
-    )
+    print(f"Created strategy database at {args.output}")
     return 0
 
 

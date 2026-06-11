@@ -13,6 +13,7 @@ from simulation.table.card import (
 )
 
 SURRENDER_EV = -0.5
+MAX_SPLIT_HANDS = 4
 
 
 def _add_card(total: int, soft_aces: int, rank: Rank) -> tuple[int, int]:
@@ -103,13 +104,26 @@ def double(
     return expected_value * 2.0
 
 
+def _can_resplit(
+    pair_rank: Rank,
+    hand_count: int,
+    settings: PlaySettings,
+) -> bool:
+    """Return whether a split hand can be split again."""
+    if hand_count >= MAX_SPLIT_HANDS or not settings.allow_resplit:
+        return False
+
+    return pair_rank != Rank.ACE or settings.allow_resplit_aces
+
+
 @cache
 def split(
     pair_total: int,
     dealer_rank: Rank,
     settings: PlaySettings,
+    hand_count: int = 2,
 ) -> float:
-    """Return EV for splitting once, without resplit recursion."""
+    """Return EV for splitting a pair, including allowed resplits."""
     pair_rank = Rank.ACE if pair_total == 22 else Rank(pair_total // 2)
     first_total, first_soft_aces = _add_card(0, 0, pair_rank)
     expected_hand_value = 0.0
@@ -117,7 +131,14 @@ def split(
     for rank, probability in RANK_PROBABILITIES.items():
         total, soft_aces = _add_card(first_total, first_soft_aces, rank)
 
-        if pair_rank == Rank.ACE and not settings.allow_hit_split_aces:
+        if rank == pair_rank and _can_resplit(pair_rank, hand_count, settings):
+            hand_value = split(
+                pair_total,
+                dealer_rank,
+                settings,
+                hand_count + 1,
+            )
+        elif pair_rank == Rank.ACE and not settings.allow_hit_split_aces:
             hand_value = stand(total, dealer_rank, settings)
         else:
             hand_value = max(
