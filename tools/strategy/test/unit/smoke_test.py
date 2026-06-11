@@ -1,6 +1,6 @@
 """Golden expected-value tests for strategy generation."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -9,7 +9,10 @@ from typing import Any
 import pytest
 import settings
 import yaml
+from simulation import ev
 from simulation import strategy
+from simulation.table import composition
+from simulation.table.card import Rank
 
 _ROOT = Path(__file__).resolve().parents[2]
 _RESOURCES = _ROOT / "test" / "resources"
@@ -65,11 +68,8 @@ def _case_id(case: SmokeCase) -> str:
     )
 
 
-@cache
-def _expected_values(
-    suite: str,
-) -> dict[ExpectedValueKey, ExpectedValueCase]:
-    """Return generated EV rows keyed by strategy context."""
+def _rules_for_suite(suite: str) -> settings.StrategyRules:
+    """Return strategy rules from a smoke-case suite."""
     with (_SMOKE_CASES / f"{suite}.yaml").open(
         "r", encoding="utf-8"
     ) as cases_file:
@@ -81,8 +81,15 @@ def _expected_values(
         }
         yaml.safe_dump(settings_data, settings_file)
         settings_file.flush()
-        rules = settings.load(Path(settings_file.name))
+        return settings.load(Path(settings_file.name))
 
+
+@cache
+def _expected_values(
+    suite: str,
+) -> dict[ExpectedValueKey, ExpectedValueCase]:
+    """Return generated EV rows keyed by strategy context."""
+    rules = _rules_for_suite(suite)
     rows = strategy.expected_values(rules)
     return {
         ExpectedValueKey(
@@ -117,3 +124,27 @@ def test_expected_values_match_resources(
     assert expected_values[key].ev == pytest.approx(
         case.values["ev"], abs=0.000001
     )
+
+
+def test_deck_count_changes_finite_shoe_ev() -> None:
+    """Confirm generated EVs depend on finite shoe composition."""
+    rules = _rules_for_suite("default")
+    one_deck_rules = replace(rules, deck_count=1)
+    six_deck_rules = replace(rules, deck_count=6)
+    one_deck_shoe = composition.remove(
+        composition.remove(
+            composition.remove(composition.fresh(1), Rank.TEN), Rank.TEN
+        ),
+        Rank.SIX,
+    )
+    six_deck_shoe = composition.remove(
+        composition.remove(
+            composition.remove(composition.fresh(6), Rank.TEN), Rank.TEN
+        ),
+        Rank.SIX,
+    )
+
+    one_deck_ev = ev.stand(16, Rank.TEN, one_deck_rules, one_deck_shoe)
+    six_deck_ev = ev.stand(16, Rank.TEN, six_deck_rules, six_deck_shoe)
+
+    assert one_deck_ev != pytest.approx(six_deck_ev, abs=0.000001)

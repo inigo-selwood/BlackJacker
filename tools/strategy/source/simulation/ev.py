@@ -3,10 +3,10 @@
 from functools import cache
 
 from settings import StrategyRules
+from simulation.table import composition
 from simulation.table import dealer
 from simulation.table.card import (
     Card,
-    RANK_PROBABILITIES,
     Rank,
     Suit,
     rank_value,
@@ -35,6 +35,7 @@ def stand(
     player_total: int,
     dealer_rank: Rank,
     rules: StrategyRules,
+    shoe: composition.Composition,
 ) -> float:
     """Return EV for standing on a player total."""
     if player_total > 21:
@@ -42,7 +43,7 @@ def stand(
 
     expected_value = 0.0
     dealer_upcard = Card(rank=dealer_rank, suit=Suit.SPADES)
-    outcomes = dealer.outcomes(dealer_upcard, rules.dealer_soft_17_rule)
+    outcomes = dealer.outcomes(dealer_upcard, rules.dealer_soft_17_rule, shoe)
 
     for outcome, probability in outcomes.items():
         if outcome == "bust":
@@ -65,19 +66,26 @@ def hit(
     soft_aces: int,
     dealer_rank: Rank,
     rules: StrategyRules,
+    shoe: composition.Composition,
 ) -> float:
     """Return EV for hitting once, then playing hit/stand optimally."""
     expected_value = 0.0
 
-    for rank, probability in RANK_PROBABILITIES.items():
+    for rank, probability, next_shoe in composition.draw_options(shoe):
         next_total, next_soft_aces = _add_card(player_total, soft_aces, rank)
 
         if next_total > 21:
             outcome_ev = -1.0
         else:
             outcome_ev = max(
-                stand(next_total, dealer_rank, rules),
-                hit(next_total, next_soft_aces, dealer_rank, rules),
+                stand(next_total, dealer_rank, rules, next_shoe),
+                hit(
+                    next_total,
+                    next_soft_aces,
+                    dealer_rank,
+                    rules,
+                    next_shoe,
+                ),
             )
 
         expected_value += outcome_ev * probability
@@ -91,13 +99,16 @@ def double(
     soft_aces: int,
     dealer_rank: Rank,
     rules: StrategyRules,
+    shoe: composition.Composition,
 ) -> float:
     """Return EV for doubling down."""
     expected_value = 0.0
 
-    for rank, probability in RANK_PROBABILITIES.items():
+    for rank, probability, next_shoe in composition.draw_options(shoe):
         next_total, _ = _add_card(player_total, soft_aces, rank)
-        expected_value += stand(next_total, dealer_rank, rules) * probability
+        expected_value += (
+            stand(next_total, dealer_rank, rules, next_shoe) * probability
+        )
 
     return expected_value * 2.0
 
@@ -119,6 +130,7 @@ def split(
     pair_total: int,
     dealer_rank: Rank,
     rules: StrategyRules,
+    shoe: composition.Composition,
     hand_count: int = 2,
 ) -> float:
     """Return EV for splitting a pair, including allowed resplits."""
@@ -126,7 +138,7 @@ def split(
     first_total, first_soft_aces = _add_card(0, 0, pair_rank)
     expected_hand_value = 0.0
 
-    for rank, probability in RANK_PROBABILITIES.items():
+    for rank, probability, next_shoe in composition.draw_options(shoe):
         total, soft_aces = _add_card(first_total, first_soft_aces, rank)
 
         if rank == pair_rank and _can_resplit(pair_rank, hand_count, rules):
@@ -134,20 +146,21 @@ def split(
                 pair_total,
                 dealer_rank,
                 rules,
+                next_shoe,
                 hand_count + 1,
             )
         elif pair_rank == Rank.ACE and not rules.allow_hit_split_aces:
-            hand_value = stand(total, dealer_rank, rules)
+            hand_value = stand(total, dealer_rank, rules, next_shoe)
         else:
             hand_value = max(
-                stand(total, dealer_rank, rules),
-                hit(total, soft_aces, dealer_rank, rules),
+                stand(total, dealer_rank, rules, next_shoe),
+                hit(total, soft_aces, dealer_rank, rules, next_shoe),
             )
 
             if rules.allow_double_after_split:
                 hand_value = max(
                     hand_value,
-                    double(total, soft_aces, dealer_rank, rules),
+                    double(total, soft_aces, dealer_rank, rules, next_shoe),
                 )
 
         expected_hand_value += hand_value * probability

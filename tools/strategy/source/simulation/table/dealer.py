@@ -3,7 +3,8 @@
 from functools import cache
 
 from settings import DealerSoft17Rule
-from simulation.table.card import Card, RANK_PROBABILITIES, Rank, rank_value
+from simulation.table import composition
+from simulation.table.card import Card, Rank, rank_value
 
 
 def _add_card(total: int, soft_aces: int, rank: Rank) -> tuple[int, int]:
@@ -40,6 +41,7 @@ def _draw_outcomes(
     total: int,
     soft_aces: int,
     soft_17_rule: DealerSoft17Rule,
+    shoe: composition.Composition,
 ) -> dict[str, float]:
     """Return dealer outcome probabilities from a current total."""
     if _should_stand(total, soft_aces, soft_17_rule):
@@ -47,12 +49,13 @@ def _draw_outcomes(
 
     outcomes: dict[str, float] = {}
 
-    for rank, probability in RANK_PROBABILITIES.items():
+    for rank, probability, next_shoe in composition.draw_options(shoe):
         next_total, next_soft_aces = _add_card(total, soft_aces, rank)
         next_outcomes = _draw_outcomes(
             next_total,
             next_soft_aces,
             soft_17_rule,
+            next_shoe,
         )
 
         for outcome, outcome_probability in next_outcomes.items():
@@ -66,8 +69,9 @@ def _draw_outcomes(
 def outcomes(
     upcard: Card,
     soft_17_rule: DealerSoft17Rule,
+    shoe: composition.Composition,
 ) -> dict[str, float]:
     """Return final dealer outcome probabilities for an upcard."""
     value = rank_value(upcard.rank)
     soft_aces = 1 if upcard.rank == Rank.ACE else 0
-    return _draw_outcomes(value, soft_aces, soft_17_rule)
+    return _draw_outcomes(value, soft_aces, soft_17_rule, shoe)

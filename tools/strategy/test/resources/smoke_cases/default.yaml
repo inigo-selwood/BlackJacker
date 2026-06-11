@@ -21,21 +21,21 @@ cases:
     dealer-upcard: "10"
     action: stand
     available: true
-    ev: -0.575782
+    ev: -0.576608
 
   - hand-kind: hard
     player-total: 16
     dealer-upcard: "10"
     action: hit
     available: true
-    ev: -0.569307
+    ev: -0.564765
 
   - hand-kind: hard
     player-total: 16
     dealer-upcard: "10"
     action: double
     available: true
-    ev: -1.138614
+    ev: -1.129530
   - hand-kind: hard
     player-total: 16
     dealer-upcard: "10"
@@ -55,32 +55,32 @@ cases:
     dealer-upcard: "6"
     action: stand
     available: true
-    ev: 0.283444
+    ev: 0.280488
   
   - hand-kind: soft
     player-total: 18
     dealer-upcard: "6"
     action: hit
     available: true
-    ev: 0.190753
+    ev: 0.191403
   
   - hand-kind: soft
     player-total: 18
     dealer-upcard: "6"
     action: double
     available: true
-    ev: 0.381506
+    ev: 0.382807
   
   - hand-kind: pair
     player-total: 16
     dealer-upcard: "6"
     action: split
     available: true
-    ev: 0.410604
+    ev: 0.406597
   
   - hand-kind: pair
     player-total: 22
     dealer-upcard: "6"
     action: split
     available: true
-    ev: 0.813134
+    ev: 0.816582

@@ -7,6 +7,7 @@ import orm
 from schema import ExpectedValue
 from settings import DoubleRule, StrategyRules
 from simulation import ev
+from simulation.table import composition
 from simulation.table.card import Rank
 
 
@@ -62,6 +63,49 @@ def _context_state(context: StrategyContext) -> tuple[int, int]:
     return context.player_total, 0
 
 
+def _hard_ranks(total: int) -> tuple[Rank, ...]:
+    """Return representative ranks for a hard-total strategy row."""
+    if total <= 11:
+        return (Rank.TWO, Rank(total - 2))
+
+    if total <= 20:
+        return (Rank.TEN, Rank(total - 10))
+
+    return (Rank.TEN, Rank.SIX, Rank.FIVE)
+
+
+def _known_ranks(context: StrategyContext) -> tuple[Rank, ...]:
+    """Return representative known player ranks for a strategy context."""
+    if context.hand_kind == HandKind.SOFT:
+        return (Rank.ACE, Rank(context.player_total - 11))
+
+    if context.hand_kind == HandKind.PAIR:
+        rank = (
+            Rank.ACE
+            if context.player_total == 22
+            else Rank(context.player_total // 2)
+        )
+        return (rank, rank)
+
+    return _hard_ranks(context.player_total)
+
+
+def _starting_shoe(
+    rules: StrategyRules,
+    context: StrategyContext,
+) -> composition.Composition:
+    """Return fresh shoe composition after visible cards are removed."""
+    shoe = composition.remove(
+        composition.fresh(rules.deck_count),
+        context.dealer_rank,
+    )
+
+    for rank in _known_ranks(context):
+        shoe = composition.remove(shoe, rank)
+
+    return shoe
+
+
 def _double_available(rules: StrategyRules, player_total: int) -> bool:
     """Return whether double is legal for a total."""
     if not rules.allow_double_down:
@@ -100,23 +144,32 @@ def _action_ev(
     rules: StrategyRules,
     context: StrategyContext,
     action: Action,
+    shoe: composition.Composition,
 ) -> float:
     """Return EV for one action in a strategy context."""
     player_total, soft_aces = _context_state(context)
 
     if action == Action.STAND:
-        return ev.stand(player_total, context.dealer_rank, rules)
+        return ev.stand(player_total, context.dealer_rank, rules, shoe)
 
     if action == Action.HIT:
-        return ev.hit(player_total, soft_aces, context.dealer_rank, rules)
+        return ev.hit(
+            player_total, soft_aces, context.dealer_rank, rules, shoe
+        )
 
     if action == Action.DOUBLE:
-        return ev.double(player_total, soft_aces, context.dealer_rank, rules)
+        return ev.double(
+            player_total,
+            soft_aces,
+            context.dealer_rank,
+            rules,
+            shoe,
+        )
 
     if action == Action.SURRENDER:
         return ev.SURRENDER_EV
 
-    return ev.split(context.player_total, context.dealer_rank, rules)
+    return ev.split(context.player_total, context.dealer_rank, rules, shoe)
 
 
 def _contexts() -> list[StrategyContext]:
@@ -143,6 +196,8 @@ def expected_values(rules: StrategyRules) -> list[ExpectedValue]:
     rows: list[ExpectedValue] = []
 
     for context in _contexts():
+        shoe = _starting_shoe(rules, context)
+
         for action in Action:
             available = _action_available(rules, context, action)
             rows.append(
@@ -153,7 +208,7 @@ def expected_values(rules: StrategyRules) -> list[ExpectedValue]:
                     action=orm.to_orm(action),
                     available=available,
                     ev=(
-                        _action_ev(rules, context, action)
+                        _action_ev(rules, context, action, shoe)
                         if available
                         else 0.0
                     ),

@@ -22,20 +22,6 @@ class Rank(IntEnum):
     KING = 13
 
 
-RANK_PROBABILITIES = {
-    Rank.ACE: 1.0 / 13.0,
-    Rank.TWO: 1.0 / 13.0,
-    Rank.THREE: 1.0 / 13.0,
-    Rank.FOUR: 1.0 / 13.0,
-    Rank.FIVE: 1.0 / 13.0,
-    Rank.SIX: 1.0 / 13.0,
-    Rank.SEVEN: 1.0 / 13.0,
-    Rank.EIGHT: 1.0 / 13.0,
-    Rank.NINE: 1.0 / 13.0,
-    Rank.TEN: 4.0 / 13.0,
-}
-
-
 def rank_value(rank: Rank) -> int:
     """Return the blackjack strategy value for a rank."""
     if rank == Rank.ACE:
