@@ -53,25 +53,6 @@ static const char *boolText(bool value) {
     return value ? "true" : "false";
 }
 
-static bool parseDoubleRule(const char *text, DoubleRule *rule) {
-    if(stringsEqual(text, "any-two") || stringsEqual(text, "any_two")) {
-        *rule = DOUBLE_ANY_TWO;
-        return true;
-    }
-
-    if(stringsEqual(text, "9-10-11") || stringsEqual(text, "9_10_11")) {
-        *rule = DOUBLE_9_10_11;
-        return true;
-    }
-
-    if(stringsEqual(text, "10-11") || stringsEqual(text, "10_11")) {
-        *rule = DOUBLE_10_11;
-        return true;
-    }
-
-    return false;
-}
-
 static const char *dealerSoft17RuleText(DealerSoft17Rule rule) {
     switch(rule) {
     case DEALER_HITS_SOFT_17:
@@ -90,20 +71,6 @@ static bool parseDealerSoft17Rule(const char *text, DealerSoft17Rule *rule) {
 
     if(stringsEqual(text, "stand")) {
         *rule = DEALER_STANDS_SOFT_17;
-        return true;
-    }
-
-    return false;
-}
-
-static bool parseBlackjackPayout(const char *text, BlackjackPayout *payout) {
-    if(stringsEqual(text, "3-to-2") || stringsEqual(text, "3_to_2")) {
-        *payout = BLACKJACK_PAYS_3_TO_2;
-        return true;
-    }
-
-    if(stringsEqual(text, "6-to-5") || stringsEqual(text, "6_to_5")) {
-        *payout = BLACKJACK_PAYS_6_TO_5;
         return true;
     }
 
@@ -132,68 +99,26 @@ applySetting(PlaySettings *settings, const char *key, const char *value) {
     int integer;
     bool boolean;
 
-    if((stringsEqual(key, "deck-count") || stringsEqual(key, "deck_count"))
-        && parseInt(value, &integer)) {
+    if(stringsEqual(key, "deck-count") && parseInt(value, &integer)) {
         settings->deckCount = integer;
-    } else if((stringsEqual(key, "cut-percent")
-                  || stringsEqual(key, "cut_percent"))
-        && parseInt(value, &integer)) {
-        settings->cutPercent = integer;
-    } else if((stringsEqual(key, "allow-double-down")
-                  || stringsEqual(key, "allow_double_down"))
-        && parseBool(value, &boolean)) {
-        settings->allowDoubleDown = boolean;
-    } else if((stringsEqual(key, "allow-double-after-split")
-                  || stringsEqual(key, "allow_double_after_split"))
+    } else if(stringsEqual(key, "allow-double-after-split")
         && parseBool(value, &boolean)) {
         settings->allowDoubleAfterSplit = boolean;
-    } else if(stringsEqual(key, "double-rule")
-        || stringsEqual(key, "double_rule")) {
-        parseDoubleRule(value, &settings->doubleRule);
-    } else if((stringsEqual(key, "allow-split")
-                  || stringsEqual(key, "allow_split"))
-        && parseBool(value, &boolean)) {
-        settings->allowSplit = boolean;
-    } else if((stringsEqual(key, "allow-resplit")
-                  || stringsEqual(key, "allow_resplit"))
-        && parseBool(value, &boolean)) {
-        settings->allowResplit = boolean;
-    } else if((stringsEqual(key, "allow-hit-split-aces")
-                  || stringsEqual(key, "allow_hit_split_aces"))
-        && parseBool(value, &boolean)) {
-        settings->allowHitSplitAces = boolean;
-    } else if((stringsEqual(key, "allow-resplit-aces")
-                  || stringsEqual(key, "allow_resplit_aces"))
-        && parseBool(value, &boolean)) {
-        settings->allowResplitAces = boolean;
-    } else if((stringsEqual(key, "allow-surrender")
-                  || stringsEqual(key, "allow_surrender"))
+    } else if(stringsEqual(key, "allow-surrender")
         && parseBool(value, &boolean)) {
         settings->allowSurrender = boolean;
-    } else if((stringsEqual(key, "use-no-hole-card-rule")
-                  || stringsEqual(key, "use_no_hole_card_rule"))
-        && parseBool(value, &boolean)) {
-        settings->useNoHoleCardRule = boolean;
-    } else if((stringsEqual(key, "show-true-count")
-                  || stringsEqual(key, "show_true_count"))
-        && parseBool(value, &boolean)) {
-        settings->showTrueCount = boolean;
-    } else if(stringsEqual(key, "dealer-soft-17-rule")
-        || stringsEqual(key, "dealer_soft_17_rule")) {
+    } else if(stringsEqual(key, "dealer-soft-17-rule")) {
         parseDealerSoft17Rule(value, &settings->dealerSoft17Rule);
-    } else if(stringsEqual(key, "blackjack-payout")
-        || stringsEqual(key, "blackjack_payout")) {
-        parseBlackjackPayout(value, &settings->blackjackPayout);
     }
 }
 
-static bool isSettingsSection(const char *section) {
-    return stringsEqual(section, "rules") || stringsEqual(section, "settings");
+static bool isRulesSection(const char *section) {
+    return stringsEqual(section, "rules");
 }
 
 PlaySettings Runtime_defaultPlaySettings(void) {
     return (PlaySettings){
-        .deckCount = 6,
+        .deckCount = 3,
         .cutPercent = 75,
         .allowDoubleDown = true,
         .allowDoubleAfterSplit = true,
@@ -259,7 +184,7 @@ bool Runtime_loadSettings(PlaySettings *settings) {
             if(!hasKey) {
                 hasKey = scalarValue(&event, key, sizeof(key));
             } else if(scalarValue(&event, value, sizeof(value))) {
-                if(mappingDepth == 1 || isSettingsSection(section)) {
+                if(mappingDepth == 2 && isRulesSection(section)) {
                     applySetting(settings, key, value);
                 }
 
