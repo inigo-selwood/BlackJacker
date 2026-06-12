@@ -1,8 +1,9 @@
-#include "render.h"
+#include "mode.h"
 
 #include <curses.h>
 
 #include "graphics/graphics.h"
+#include "runtime/runtime.h"
 
 static void drawHorizontalBorder(
     Graphics_Box box,

@@ -1,6 +1,6 @@
-#include "controls.h"
+#include "mode.h"
 
-#include "modes/play/game.h"
+#include "runtime/runtime.h"
 
 enum { CONTROL_GAP = 1, CONTROL_WIDTH = 14 };
 

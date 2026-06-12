@@ -1,5 +1,6 @@
-#include "game.h"
+#include "mode.h"
 
+#include "runtime/runtime.h"
 #include "table/table.h"
 
 static void clearHand(Table_Hand *hand) {

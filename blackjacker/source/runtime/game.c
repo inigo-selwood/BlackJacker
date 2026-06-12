@@ -1,6 +1,6 @@
 #include "runtime/runtime.h"
 
-#include "modes/play/game.h"
+#include "modes/play/mode.h"
 #include "table/table.h"
 
 Runtime_Game Runtime_initGame(void) {

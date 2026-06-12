@@ -1,8 +1,7 @@
 #include "mode.h"
 
 #include "graphics/graphics.h"
-#include "modes/play/controls.h"
-#include "modes/play/render.h"
+#include "runtime/runtime.h"
 
 static Graphics_Box controlsBox(void) {
     const Graphics_Box content = Graphics_minimumContentBox();

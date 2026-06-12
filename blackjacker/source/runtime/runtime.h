@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "modes/play/state.h"
+#include "modes/play/mode.h"
 #include "table/table.h"
 
 /*******************************************************************************
@@ -28,7 +28,7 @@ typedef enum {
 } Runtime_GuideSection;
 
 /** Mutable runtime state for mode, deferred transitions, and focus. */
-typedef struct {
+typedef struct Runtime_State {
     Runtime_Mode mode;
     Runtime_Mode queuedMode;
     bool hasQueuedMode;
@@ -51,7 +51,7 @@ void Runtime_applyQueuedState(Runtime_State *state);
  ******************************************************************************/
 
 /** Root game model passed through mode callbacks. */
-typedef struct {
+typedef struct Runtime_Game {
     Runtime_State state;
     PlaySettings playSettings;
     Table_Shoe shoe;
@@ -89,7 +89,7 @@ typedef enum {
 } Runtime_ModeEventType;
 
 /** Per-frame event delivered to the active mode. */
-typedef struct {
+typedef struct Runtime_ModeEvent {
     Runtime_ModeEventType type;
     int input;
 } Runtime_ModeEvent;
