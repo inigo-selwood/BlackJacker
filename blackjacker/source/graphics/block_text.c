@@ -195,8 +195,7 @@ void Graphics_drawBlockText(Graphics_BlockText *blockText) {
         Graphics_Label label = Graphics_label(
             loaded->lines[index],
             GRAPHICS_ALIGN_START,
-            loaded->bold,
-            false
+            loaded->bold ? GRAPHICS_TEXT_BOLD : GRAPHICS_TEXT_NORMAL
         );
 
         Graphics_positionLabelWithin(

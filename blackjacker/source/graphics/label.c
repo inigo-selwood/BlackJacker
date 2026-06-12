@@ -3,6 +3,12 @@
 #include <curses.h>
 #include <string.h>
 
+#ifdef A_ITALIC
+#define GRAPHICS_ITALIC_ATTR A_ITALIC
+#else
+#define GRAPHICS_ITALIC_ATTR 0
+#endif
+
 static int
 alignedOffset(int available, int size, Graphics_Alignment alignment) {
     if(alignment == GRAPHICS_ALIGN_CENTER) {
@@ -19,8 +25,7 @@ alignedOffset(int available, int size, Graphics_Alignment alignment) {
 Graphics_Label Graphics_label(
     const char *text,
     Graphics_Alignment alignment,
-    bool bold,
-    bool inverted
+    int properties
 ) {
     return (Graphics_Label){
         .text = text,
@@ -28,8 +33,7 @@ Graphics_Label Graphics_label(
         .width = text ? (int)strlen(text) : 0,
         .height = 1,
         .alignment = alignment,
-        .bold = bold,
-        .inverted = inverted,
+        .properties = properties,
     };
 }
 
@@ -48,21 +52,29 @@ void Graphics_positionLabelWithin(
 }
 
 static void drawLabelAttrs(Graphics_Label label) {
-    if(label.bold) {
+    if(label.properties & GRAPHICS_TEXT_BOLD) {
         attron(A_BOLD);
     }
 
-    if(label.inverted) {
-        attron(A_REVERSE);
+    if(label.properties & GRAPHICS_TEXT_UNDERLINE) {
+        attron(A_UNDERLINE);
+    }
+
+    if(label.properties & GRAPHICS_TEXT_ITALIC) {
+        attron(GRAPHICS_ITALIC_ATTR);
     }
 }
 
 static void clearLabelAttrs(Graphics_Label label) {
-    if(label.inverted) {
-        attroff(A_REVERSE);
+    if(label.properties & GRAPHICS_TEXT_ITALIC) {
+        attroff(GRAPHICS_ITALIC_ATTR);
     }
 
-    if(label.bold) {
+    if(label.properties & GRAPHICS_TEXT_UNDERLINE) {
+        attroff(A_UNDERLINE);
+    }
+
+    if(label.properties & GRAPHICS_TEXT_BOLD) {
         attroff(A_BOLD);
     }
 }

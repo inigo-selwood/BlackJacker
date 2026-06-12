@@ -29,14 +29,12 @@ void noticeCallback(Runtime_Game *game, Runtime_ModeEvent event) {
     Graphics_Label title = Graphics_label(
         "Console Too Small",
         GRAPHICS_ALIGN_CENTER,
-        true,
-        false
+        GRAPHICS_TEXT_BOLD
     );
     Graphics_Label body = Graphics_label(
         "Please enlarge the terminal to continue.",
         GRAPHICS_ALIGN_CENTER,
-        false,
-        false
+        GRAPHICS_TEXT_NORMAL
     );
 
     Graphics_arrangeWithin(panel, GRAPHICS_DIRECTION_COLUMN, 0, sections, 5);

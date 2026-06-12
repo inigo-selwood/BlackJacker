@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "runtime/runtime.h"
+typedef struct Runtime_Game Runtime_Game;
 
 enum { MIN_TERMINAL_WIDTH = 80, MIN_TERMINAL_HEIGHT = 40 };
 
@@ -116,23 +116,25 @@ void Graphics_drawTable(Graphics_Table table);
  ******************************************************************************/
 
 /** Text label plus simple rendering attributes. */
+typedef enum {
+    GRAPHICS_TEXT_NORMAL = 0,
+    GRAPHICS_TEXT_BOLD = 1 << 0,
+    GRAPHICS_TEXT_UNDERLINE = 1 << 1,
+    GRAPHICS_TEXT_ITALIC = 1 << 2,
+} Graphics_TextProperties;
+
 typedef struct {
     const char *text;
     Graphics_Box box;
     int width;
     int height;
     Graphics_Alignment alignment;
-    bool bold;
-    bool inverted;
+    int properties;
 } Graphics_Label;
 
 /** Creates a single-line label, inferring width from text. */
-Graphics_Label Graphics_label(
-    const char *text,
-    Graphics_Alignment alignment,
-    bool bold,
-    bool inverted
-);
+Graphics_Label
+Graphics_label(const char *text, Graphics_Alignment alignment, int properties);
 
 /** Positions a label within a parent box. */
 void Graphics_positionLabelWithin(

@@ -502,8 +502,7 @@ static void drawGuide(Runtime_Game *game) {
     Graphics_Label title = Graphics_label(
         sectionTitle(section),
         GRAPHICS_ALIGN_CENTER,
-        true,
-        false
+        GRAPHICS_TEXT_BOLD
     );
     Graphics_ControlGroup controls;
 
@@ -522,8 +521,7 @@ static void drawGuide(Runtime_Game *game) {
         Graphics_Label error = Graphics_label(
             "Strategy database not found.",
             GRAPHICS_ALIGN_CENTER,
-            false,
-            false
+            GRAPHICS_TEXT_NORMAL
         );
         Graphics_positionLabelWithin(
             &error,
